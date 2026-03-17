@@ -5,6 +5,7 @@ import {
   UserPlus,
   LogOut,
   Building2,
+  CreditCard,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
@@ -43,6 +44,18 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Moj portal',
     to: '/employee',
     icon: <LayoutDashboard className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
+  {
+    label: 'Kreiraj korisnika',
+    to: '/employee/clients/new',
+    icon: <UserPlus className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
+  {
+    label: 'Kreiraj račun',
+    to: '/employee/accounts/new',
+    icon: <CreditCard className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
   {

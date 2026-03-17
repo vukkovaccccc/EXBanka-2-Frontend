@@ -123,6 +123,16 @@ export interface UpdateEmployeeRequest {
   permissions: string[]
 }
 
+export interface CreateClientRequest {
+  first_name: string
+  last_name: string
+  email: string
+  address: string
+  date_of_birth: string   // YYYY-MM-DD from form; "" = not provided
+  gender: string          // "" | "MALE" | "FEMALE"
+  phone: string
+}
+
 // ─── gRPC/HTTP status codes ───────────────────────────────────────────────────
 
 export enum GrpcStatus {
@@ -143,6 +153,51 @@ export enum GrpcStatus {
 export interface GrpcError {
   code: GrpcStatus
   message: string
+}
+
+// ─── Bank / Dictionary types ──────────────────────────────────────────────────
+
+export interface ClientPreview {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+}
+
+export interface Currency {
+  id: string
+  naziv: string   // full name, e.g. "Srpski dinar"
+  oznaka: string  // ISO 4217 code, e.g. "RSD"
+}
+
+export interface Delatnost {
+  id: string
+  sifra: string
+  naziv: string
+  grana: string
+  sektor: string
+}
+
+// ─── Account creation contracts ──────────────────────────────────────────────
+
+export interface CreateAccountFirmaRequest {
+  naziv:               string
+  maticni_broj:        string
+  pib:                 string
+  adresa:              string
+  sifra_delatnosti_id: string
+}
+
+export interface CreateAccountRequest {
+  vlasnik_id:      string
+  kategorija:      string   // "TEKUCI" | "DEVIZNI"
+  tip:             string   // "LICNI" | "POSLOVNI"
+  valuta_id:       string
+  podvrsta?:       string
+  naziv_racuna:    string
+  pocetno_stanje:  number
+  napravi_karticu: boolean
+  firma?:          CreateAccountFirmaRequest
 }
 
 // ─── App state ────────────────────────────────────────────────────────────────
