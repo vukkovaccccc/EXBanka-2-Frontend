@@ -19,6 +19,12 @@ import EmployeePage from '@/pages/employee/EmployeePage'
 import CreateClient from '@/pages/employee/CreateClient'
 import CreateAccount from '@/pages/employee/CreateAccount'
 import ClientPage from '@/pages/client/ClientPage'
+import AccountsPage from '@/pages/client/AccountsPage'
+import AccountDetailPage from '@/pages/client/AccountDetailPage'
+import PrimaociPage from '@/pages/client/payments/PrimaociPage'
+import NovoPlacanjeWizard from '@/pages/client/payments/NovoPlacanjeWizard'
+import PrenosPage from '@/pages/client/payments/PrenosPage'
+import PregledPlacanja from '@/pages/client/payments/PregledPlacanja'
 
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -52,6 +58,12 @@ const router = createBrowserRouter(
           {/* Client home */}
           <Route path="/client" element={<PrivateRoute requiredRole="CLIENT" />}>
             <Route index element={<ClientPage />} />
+            <Route path="accounts" element={<AccountsPage />} />
+            <Route path="accounts/:id" element={<AccountDetailPage />} />
+            <Route path="payments/new" element={<NovoPlacanjeWizard />} />
+            <Route path="payments/transfer" element={<PrenosPage />} />
+            <Route path="payments/recipients" element={<PrimaociPage />} />
+            <Route path="payments/history" element={<PregledPlacanja />} />
           </Route>
         </Route>
       </Route>

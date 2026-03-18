@@ -5,6 +5,7 @@ import type {
   ResetPasswordRequest,
   SetPasswordRequest,
   Permission,
+  MyProfile,
 } from '@/types'
 
 export async function login(request: LoginRequest): Promise<LoginResponse> {
@@ -52,4 +53,20 @@ export async function getPermissionsCodebook(): Promise<Permission[]> {
     id: String(p.id),
     name: p.permissionCode,
   }))
+}
+
+export async function getMyProfile(): Promise<MyProfile> {
+  // Backend returns: { id, email, firstName, lastName }
+  const res = await apiGet<{
+    id: string | number
+    email: string
+    firstName: string
+    lastName: string
+  }>('/user/me')
+  return {
+    id:         String(res.id),
+    email:      res.email,
+    first_name: res.firstName,
+    last_name:  res.lastName,
+  }
 }

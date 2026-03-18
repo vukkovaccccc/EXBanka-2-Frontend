@@ -144,10 +144,11 @@ export enum GrpcStatus {
   NOT_FOUND = 5,
   ALREADY_EXISTS = 6,
   PERMISSION_DENIED = 7,
-  UNAUTHENTICATED = 16,
   RESOURCE_EXHAUSTED = 8,
-  UNAVAILABLE = 14,
+  FAILED_PRECONDITION = 9,
   INTERNAL = 13,
+  UNAVAILABLE = 14,
+  UNAUTHENTICATED = 16,
 }
 
 export interface GrpcError {
@@ -207,4 +208,95 @@ export interface AuthUser {
   email: string
   userType: UserType
   permissions: string[]
+}
+
+// ─── Client account types ─────────────────────────────────────────────────────
+
+export interface AccountListItem {
+  id: string
+  broj_racuna: string
+  naziv_racuna: string
+  kategorija_racuna: string  // "TEKUCI" | "DEVIZNI"
+  vrsta_racuna: string       // "LICNI" | "POSLOVNI"
+  valuta_oznaka: string      // e.g. "RSD", "EUR"
+  stanje_racuna: number
+  rezervisana_sredstva: number
+  raspolozivo_stanje: number
+}
+
+export interface AccountDetail {
+  id: string
+  broj_racuna: string
+  naziv_racuna: string
+  kategorija_racuna: string
+  vrsta_racuna: string
+  valuta_oznaka: string
+  stanje_racuna: number
+  rezervisana_sredstva: number
+  raspolozivo_stanje: number
+  dnevni_limit: number   // 0 = nije postavljen
+  mesecni_limit: number  // 0 = nije postavljen
+  naziv_firme?: string   // samo za POSLOVNI
+}
+
+export interface Transakcija {
+  id: string
+  tip_transakcije: string     // "UPLATA" | "ISPLATA" | "INTERNI_TRANSFER"
+  iznos: number
+  opis: string
+  vreme_izvrsavanja: string   // ISO 8601
+  status: string              // "IZVRSEN" | "CEKANJE" | "STORNIRAN"
+}
+
+export interface MyProfile {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+}
+
+// ─── Payment module types ─────────────────────────────────────────────────────
+
+export interface PaymentRecipient {
+  id: string
+  naziv: string
+  broj_racuna: string
+}
+
+export interface PaymentIntent {
+  id: string
+  idempotency_key: string
+  broj_naloga: string
+  tip_transakcije: string    // "PLACANJE" | "PRENOS"
+  broj_racuna_platioca: string
+  broj_racuna_primaoca: string
+  naziv_primaoca: string
+  iznos: number
+  krajnji_iznos: number
+  provizija: number
+  valuta: string
+  sifra_placanja: string
+  poziv_na_broj: string
+  svrha_placanja: string
+  status: string             // "U_OBRADI" | "REALIZOVANO" | "ODBIJENO"
+  created_at: string
+  executed_at: string
+  failed_reason: string
+}
+
+export interface CreatePaymentIntentResult {
+  intent_id: string
+  action_id: string
+  broj_naloga: string
+  status: string
+  valuta: string
+  iznos: number
+}
+
+export interface PaymentHistoryFilter {
+  status?: string
+  date_from?: string
+  date_to?: string
+  min_iznos?: number
+  max_iznos?: number
 }

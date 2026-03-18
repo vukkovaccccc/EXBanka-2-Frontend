@@ -12,6 +12,12 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      // bank-service — must be listed BEFORE the generic /api entry so it matches first
+      '/api/bank': {
+        target: 'http://localhost:8083',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/bank/, '/bank'),
+      },
       '/api': {
         target: 'http://localhost:8082',
         changeOrigin: true,

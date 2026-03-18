@@ -39,6 +39,9 @@ export function mapGrpcError(code: number, _rawMessage?: string): MappedError {
     case GrpcStatus.INVALID_ARGUMENT:
       message = _rawMessage?.trim() || 'Uneseni podaci nisu ispravni. Proverite unos.'
       break
+    case GrpcStatus.FAILED_PRECONDITION:
+      message = _rawMessage?.trim() || 'Zahtev ne može biti ispunjen u trenutnom stanju.'
+      break
     default:
       message = 'Došlo je do greške. Molimo pokušajte ponovo.'
   }

@@ -1,6 +1,14 @@
-import { apiGet, apiPost } from './grpcClient'
+import { apiGet, apiPost, apiPatch } from './grpcClient'
 import { useAuthStore } from '@/store/authStore'
-import type { ClientPreview, Currency, Delatnost, CreateAccountRequest } from '@/types'
+import type {
+  ClientPreview,
+  Currency,
+  Delatnost,
+  CreateAccountRequest,
+  AccountListItem,
+  AccountDetail,
+  Transakcija,
+} from '@/types'
 
 // ─── Backend response shapes (gRPC-Gateway camelCase) ─────────────────────────
 
@@ -107,4 +115,144 @@ export async function createAccount(req: CreateAccountRequest): Promise<{ id: st
 
   const res = await apiPost<typeof body, { id: string | number }>('/bank/accounts', body)
   return { id: String(res.id) }
+}
+
+// ─── Backend shapes for account endpoints ─────────────────────────────────────
+
+interface BackendAccountListItem {
+  id: string | number
+  brojRacuna: string
+  nazivRacuna: string
+  kategorijaRacuna: string
+  vrstaRacuna: string
+  valutaOznaka: string
+  stanjeRacuna: string | number
+  rezervisanaSredstva: string | number
+  raspolozivoStanje: string | number
+}
+
+// gRPC-Gateway returns AccountDetail directly (no wrapper object)
+interface BackendAccountDetail {
+  id: string | number
+  brojRacuna: string
+  nazivRacuna: string
+  kategorijaRacuna: string
+  vrstaRacuna: string
+  valutaOznaka: string
+  stanjeRacuna: string | number
+  rezervisanaSredstva: string | number
+  raspolozivoStanje: string | number
+  dnevniLimit: string | number
+  mesecniLimit: string | number
+  nazivFirme?: string
+}
+
+interface BackendTransakcija {
+  id: string | number
+  tipTransakcije: string
+  iznos: string | number
+  opis: string
+  vremeIzvrsavanja: string
+  status: string
+}
+
+function parseNum(v: string | number | null | undefined): number {
+  if (v === null || v === undefined) return 0
+  return typeof v === 'number' ? v : parseFloat(v) || 0
+}
+
+// ─── GetClientAccounts ────────────────────────────────────────────────────────
+
+export async function getClientAccounts(): Promise<AccountListItem[]> {
+  const res = await apiGet<{ accounts: BackendAccountListItem[] | null }>('/bank/client/accounts')
+  return (res.accounts ?? []).map((a) => ({
+    id:                   String(a.id),
+    broj_racuna:          a.brojRacuna,
+    naziv_racuna:         a.nazivRacuna,
+    kategorija_racuna:    a.kategorijaRacuna,
+    vrsta_racuna:         a.vrstaRacuna,
+    valuta_oznaka:        a.valutaOznaka,
+    stanje_racuna:        parseNum(a.stanjeRacuna),
+    rezervisana_sredstva: parseNum(a.rezervisanaSredstva),
+    raspolozivo_stanje:   parseNum(a.raspolozivoStanje),
+  }))
+}
+
+// ─── GetAccountDetail ─────────────────────────────────────────────────────────
+
+export async function getAccountDetail(id: string): Promise<AccountDetail> {
+  // gRPC-Gateway returns AccountDetail directly, NOT wrapped in { account: ... }
+  const a = await apiGet<BackendAccountDetail>(`/bank/client/accounts/${id}`)
+  return {
+    id:                   String(a.id),
+    broj_racuna:          a.brojRacuna,
+    naziv_racuna:         a.nazivRacuna,
+    kategorija_racuna:    a.kategorijaRacuna,
+    vrsta_racuna:         a.vrstaRacuna,
+    valuta_oznaka:        a.valutaOznaka,
+    stanje_racuna:        parseNum(a.stanjeRacuna),
+    rezervisana_sredstva: parseNum(a.rezervisanaSredstva),
+    raspolozivo_stanje:   parseNum(a.raspolozivoStanje),
+    dnevni_limit:         parseNum(a.dnevniLimit),
+    mesecni_limit:        parseNum(a.mesecniLimit),
+    naziv_firme:          a.nazivFirme,
+  }
+}
+
+// ─── GetAccountTransactions ───────────────────────────────────────────────────
+
+export async function getAccountTransactions(
+  racunId: string,
+  params?: { sort_by?: string; order?: string }
+): Promise<Transakcija[]> {
+  const res = await apiGet<{ transactions: BackendTransakcija[] | null }>(
+    `/bank/client/accounts/${racunId}/transactions`,
+    {
+      sort_by: params?.sort_by,
+      order:   params?.order,
+    }
+  )
+  return (res.transactions ?? []).map((t) => ({
+    id:                String(t.id),
+    tip_transakcije:   t.tipTransakcije,
+    iznos:             parseNum(t.iznos),
+    opis:              t.opis,
+    vreme_izvrsavanja: t.vremeIzvrsavanja,
+    status:            t.status,
+  }))
+}
+
+// ─── RenameAccount ────────────────────────────────────────────────────────────
+
+export async function renameAccount(id: string, newName: string): Promise<void> {
+  // proto field: novi_naziv → gRPC-Gateway JSON key: noviNaziv
+  await apiPatch<{ noviNaziv: string }, unknown>(`/bank/client/accounts/${id}/name`, { noviNaziv: newName })
+}
+
+// ─── RequestLimitChange (creates pending action → requires mobile verification) ─
+
+interface UpdateLimitResponse {
+  actionId: string | number
+  status: string
+}
+
+export async function requestLimitChange(
+  id: string,
+  dnevniLimit: number,
+  mesecniLimit: number
+): Promise<{ actionId: string }> {
+  const res = await apiPatch<
+    { dnevniLimit: number; mesecniLimit: number },
+    UpdateLimitResponse
+  >(`/bank/client/accounts/${id}/limit`, { dnevniLimit, mesecniLimit })
+  return { actionId: String(res.actionId) }
+}
+
+// ─── VerifyLimitChange (enter code received on mobile) ────────────────────────
+
+export async function verifyLimitChange(actionId: string, code: string): Promise<void> {
+  await apiPost<{ code: string }, unknown>(
+    `/bank/client/pending-actions/${actionId}/verify`,
+    { code }
+  )
 }

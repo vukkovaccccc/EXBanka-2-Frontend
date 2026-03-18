@@ -6,6 +6,11 @@ import {
   LogOut,
   Building2,
   CreditCard,
+  Wallet,
+  SendHorizontal,
+  ArrowLeftRight,
+  UserCheck,
+  ClipboardList,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
@@ -62,6 +67,36 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Klijentski portal',
     to: '/client',
     icon: <LayoutDashboard className="h-5 w-5" />,
+    roles: ['CLIENT'],
+  },
+  {
+    label: 'Računi',
+    to: '/client/accounts',
+    icon: <Wallet className="h-5 w-5" />,
+    roles: ['CLIENT'],
+  },
+  {
+    label: 'Novo plaćanje',
+    to: '/client/payments/new',
+    icon: <SendHorizontal className="h-5 w-5" />,
+    roles: ['CLIENT'],
+  },
+  {
+    label: 'Prenos',
+    to: '/client/payments/transfer',
+    icon: <ArrowLeftRight className="h-5 w-5" />,
+    roles: ['CLIENT'],
+  },
+  {
+    label: 'Primaoci',
+    to: '/client/payments/recipients',
+    icon: <UserCheck className="h-5 w-5" />,
+    roles: ['CLIENT'],
+  },
+  {
+    label: 'Pregled plaćanja',
+    to: '/client/payments/history',
+    icon: <ClipboardList className="h-5 w-5" />,
     roles: ['CLIENT'],
   },
 ]
