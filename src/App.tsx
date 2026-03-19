@@ -17,6 +17,9 @@ import CreateEmployee from '@/pages/admin/CreateEmployee'
 // Role home pages
 import EmployeePage from '@/pages/employee/EmployeePage'
 import CreateClient from '@/pages/employee/CreateClient'
+import ClientListPage from '@/pages/employee/ClientListPage'
+import ClientDetailPage from '@/pages/employee/ClientDetailPage'
+import EditClient from '@/pages/employee/EditClient'
 import CreateAccount from '@/pages/employee/CreateAccount'
 import ClientPage from '@/pages/client/ClientPage'
 import AccountsPage from '@/pages/client/AccountsPage'
@@ -60,6 +63,9 @@ const router = createBrowserRouter(
           {/* Employee home */}
           <Route path="/employee" element={<PrivateRoute requiredRole="EMPLOYEE" />}>
             <Route index element={<EmployeePage />} />
+            <Route path="clients" element={<ClientListPage />} />
+            <Route path="clients/:id" element={<ClientDetailPage />} />
+            <Route path="clients/:id/edit" element={<EditClient />} />
             <Route path="clients/new" element={<CreateClient />} />
             <Route path="accounts/new" element={<CreateAccount />} />
             <Route path="krediti/zahtevi" element={<ZahteviZaKreditPage />} />

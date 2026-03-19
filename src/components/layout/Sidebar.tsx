@@ -57,6 +57,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['EMPLOYEE'],
   },
   {
+    label: 'Lista klijenata',
+    to: '/employee/clients',
+    icon: <Users className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
+  {
     label: 'Kreiraj korisnika',
     to: '/employee/clients/new',
     icon: <UserPlus className="h-5 w-5" />,

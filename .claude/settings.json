@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/vuk/Workspace/Banka/**)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(protoc --version)",
+      "Bash(protoc-gen-go --version)",
+      "Bash(go version:*)",
+      "Read(//home/vuk/go/bin/**)",
+      "Bash(go install:*)",
+      "Bash(sudo apt-get:*)",
+      "Bash(apt-get install:*)",
+      "Bash(PB_REL=\"https://github.com/protocolbuffers/protobuf/releases\")",
+      "Bash(curl -LO $PB_REL/download/v28.0/protoc-28.0-linux-x86_64.zip)",
+      "Bash(unzip -o protoc-28.0-linux-x86_64.zip -d $HOME/.local)",
+      "Bash(mkdir -p $HOME/.local)",
+      "Read(//tmp/**)",
+      "Bash(curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v28.0/protoc-28.0-linux-x86_64.zip)",
+      "Bash(python3 -c \"import zipfile; zipfile.ZipFile\\(''protoc-28.0-linux-x86_64.zip''\\).extractall\\(''$HOME/.local''\\)\")",
+      "Bash(chmod +x $HOME/.local/bin/protoc)",
+      "Bash(PATH=$HOME/.local/bin:$HOME/go/bin:$PATH make proto)",
+      "Bash(docker compose:*)"
+    ]
+  }
+}

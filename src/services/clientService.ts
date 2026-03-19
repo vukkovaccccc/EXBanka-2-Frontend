@@ -1,5 +1,74 @@
-import { apiPost } from './grpcClient'
-import type { CreateClientRequest } from '@/types'
+import { apiGet, apiPatch, apiPost } from './grpcClient'
+import type { Client, ClientDetail, CreateClientRequest, ListClientsParams, ListClientsResponse, UpdateClientRequest } from '@/types'
+
+// ── Backend shapes (gRPC-Gateway returns camelCase) ───────────────────────────
+
+interface BackendClient {
+  id: number | string
+  firstName: string
+  lastName: string
+  email: string
+  phoneNumber: string
+}
+
+interface BackendClientDetail extends BackendClient {
+  address: string
+  dateOfBirth: number | string  // gRPC-Gateway serialises int64 as string
+  gender: string                // proto enum name e.g. "GENDER_FEMALE"
+}
+
+interface BackendListClientsResponse {
+  clients: BackendClient[] | null
+  hasMore: boolean
+}
+
+interface BackendGetClientResponse {
+  client: BackendClientDetail
+}
+
+function mapClient(c: BackendClient): Client {
+  return {
+    id: String(c.id),
+    first_name: c.firstName,
+    last_name: c.lastName,
+    email: c.email,
+    phone_number: c.phoneNumber,
+  }
+}
+
+export async function getClientById(id: string): Promise<ClientDetail> {
+  const res = await apiGet<BackendGetClientResponse>(`/client/${id}`)
+  const c = res.client
+  return {
+    id:           String(c.id),
+    first_name:   c.firstName,
+    last_name:    c.lastName,
+    email:        c.email,
+    phone_number: c.phoneNumber,
+    address:      c.address,
+    date_of_birth: Number(c.dateOfBirth),
+    gender:       c.gender.replace('GENDER_', ''),
+  }
+}
+
+export async function updateClient(id: string, req: UpdateClientRequest): Promise<void> {
+  await apiPatch<UpdateClientRequest, unknown>(`/client/${id}`, req)
+}
+
+export async function getClients(params: ListClientsParams = {}): Promise<ListClientsResponse> {
+  const query: Record<string, string | number | undefined> = {
+    limit:  params.limit  ?? 20,
+    offset: params.offset ?? 0,
+  }
+  if (params.name?.trim())  query['name']  = params.name.trim()
+  if (params.email?.trim()) query['email'] = params.email.trim()
+
+  const res = await apiGet<BackendListClientsResponse>('/client', query)
+  return {
+    clients:  (res.clients ?? []).map(mapClient),
+    has_more: res.hasMore,
+  }
+}
 
 function genderToProtoNum(g: string): number {
   switch (g) {

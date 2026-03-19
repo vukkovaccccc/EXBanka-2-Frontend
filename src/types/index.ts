@@ -123,6 +123,14 @@ export interface UpdateEmployeeRequest {
   permissions: string[]
 }
 
+export interface UpdateClientRequest {
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  address: string
+}
+
 export interface CreateClientRequest {
   first_name: string
   last_name: string
@@ -131,6 +139,37 @@ export interface CreateClientRequest {
   date_of_birth: string   // YYYY-MM-DD from form; "" = not provided
   gender: string          // "" | "MALE" | "FEMALE"
   phone: string
+}
+
+export interface Client {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+}
+
+export interface ClientDetail {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  address: string
+  date_of_birth: number   // unix timestamp ms
+  gender: string          // "MALE" | "FEMALE" | "OTHER" | ""
+}
+
+export interface ListClientsParams {
+  name?: string
+  email?: string
+  limit?: number
+  offset?: number
+}
+
+export interface ListClientsResponse {
+  clients: Client[]
+  has_more: boolean
 }
 
 // ─── gRPC/HTTP status codes ───────────────────────────────────────────────────
