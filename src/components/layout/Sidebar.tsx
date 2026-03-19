@@ -12,6 +12,8 @@ import {
   SendHorizontal,
   UserCheck,
   ClipboardList,
+  Landmark,
+  FileText,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react'
@@ -66,13 +68,26 @@ const NAV_ITEMS: NavItem[] = [
     icon: <CreditCard className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
+  {
+    label: 'Zahtevi za kredit',
+    to: '/employee/krediti/zahtevi',
+    icon: <FileText className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
+  {
+    label: 'Svi krediti',
+    to: '/employee/krediti/svi',
+    icon: <Landmark className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
+  
   // ── Client (text-only, no icons per spec) ──────────────────────────────
   { label: 'Početna',    to: '/client',           roles: ['CLIENT'] },
   { label: 'Računi',     to: '/client/accounts',  roles: ['CLIENT'] },
   // NOTE: Plaćanja is rendered as a collapsible submenu below — not here
   { label: 'Menjačnica', to: '/client/exchange',  roles: ['CLIENT'] },
   { label: 'Kartice',    to: '/client/cards',     roles: ['CLIENT'] },
-  { label: 'Krediti',    to: '/client/loans',     roles: ['CLIENT'] },
+  { label: 'Krediti',    to: '/client/krediti',     roles: ['CLIENT'] },
 ]
 
 const PAYMENT_SUB_ITEMS = [

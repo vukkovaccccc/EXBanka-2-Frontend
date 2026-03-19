@@ -17,6 +17,14 @@ import CreateEmployee from '@/pages/admin/CreateEmployee'
 import EmployeePage from '@/pages/employee/EmployeePage'
 import ClientPage from '@/pages/client/ClientPage'
 
+// Client – Krediti
+import KreditiPage from '@/pages/client/krediti/KreditiPage'
+import KreditZahtevForm from '@/pages/client/krediti/KreditZahtevForm'
+
+// Employee – Krediti
+import ZahteviZaKreditPage from '@/pages/employee/krediti/ZahteviZaKreditPage'
+import SviKreditiPage from '@/pages/employee/krediti/SviKreditiPage'
+
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export default function AppRouter() {
@@ -47,6 +55,8 @@ export default function AppRouter() {
             element={<PrivateRoute requiredRole="EMPLOYEE" />}
           >
             <Route index element={<EmployeePage />} />
+            <Route path="krediti/zahtevi" element={<ZahteviZaKreditPage />} />
+            <Route path="krediti/svi" element={<SviKreditiPage />} />
           </Route>
 
           {/* Client home */}
@@ -55,6 +65,8 @@ export default function AppRouter() {
             element={<PrivateRoute requiredRole="CLIENT" />}
           >
             <Route index element={<ClientPage />} />
+            <Route path="krediti" element={<KreditiPage />} />
+            <Route path="krediti/novo" element={<KreditZahtevForm />} />
           </Route>
         </Route>
       </Route>

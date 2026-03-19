@@ -12,12 +12,18 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // bank-service — must be listed BEFORE the generic /api entry so it matches first
+      // bank-service (account/currency helpers) — /api/bank → 8083/bank
       '/api/bank': {
         target: 'http://localhost:8083',
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api\/bank/, '/bank'),
       },
+      // krediti + all v1 bank-service routes — /api/v1 → 8083/api/v1 (path kept intact)
+      '/api/v1': {
+        target: 'http://localhost:8083',
+        changeOrigin: true,
+      },
+      // user-service fallback — /api → 8082
       '/api': {
         target: 'http://localhost:8082',
         changeOrigin: true,

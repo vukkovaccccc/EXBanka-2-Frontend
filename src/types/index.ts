@@ -300,3 +300,78 @@ export interface PaymentHistoryFilter {
   min_iznos?: number
   max_iznos?: number
 }
+
+// ─── Loan (Kredit) types ──────────────────────────────────────────────────────
+
+export type VrstaKredita = 'GOTOVINSKI' | 'STAMBENI' | 'AUTO' | 'REFINANSIRAJUCI' | 'STUDENTSKI'
+export type TipKamate = 'FIKSNA' | 'VARIJABILNA'
+export type StatusKredita = 'ODOBREN' | 'ODBIJEN' | 'OTPLACEN' | 'U_KASNJENJU'
+export type StatusPlacanja = 'PLACENO' | 'NEPLACENO' | 'KASNI'
+
+export interface Kredit {
+  id: string
+  broj_kredita: string
+  vrsta_kredita: VrstaKredita
+  broj_racuna: string
+  ukupan_iznos: number
+  period_otplate: number
+  kamatna_stopa: number
+  efektivna_kamatna_stopa: number
+  datum_ugovaranja: string
+  datum_isplate: string
+  iznos_sledece_rate: number
+  datum_sledece_rate: string
+  preostalo_dugovanje: number
+  valuta: string
+  status: StatusKredita
+  tip_kamate: TipKamate
+}
+
+export interface KreditRata {
+  id: string
+  broj_kredita: string
+  iznos_rate: number
+  iznos_kamatne_stope: number
+  valuta: string
+  ocekivani_datum_dospeca: string
+  pravi_datum_dospeca: string | null
+  status_placanja: StatusPlacanja
+}
+
+export interface KreditDetail {
+  kredit: Kredit
+  rate: KreditRata[]
+}
+
+export interface ZahtevZaKreditRequest {
+  vrsta_kredita: string
+  tip_kamatne_stope: string
+  iznos: number
+  valuta: string
+  svrha: string
+  mesecna_plata: number
+  status_zaposlenja: string
+  period_zaposlenja: number
+  kontakt_telefon: string
+  broj_racuna: string
+  rok_otplate: number
+}
+
+export type StatusZahteva = 'NA_CEKANJU' | 'ODOBREN' | 'ODBIJEN'
+
+export interface KreditZahtev {
+  id: string
+  vrsta_kredita: VrstaKredita
+  tip_kamatne_stope: TipKamate
+  iznos: number
+  valuta: string
+  svrha: string
+  mesecna_plata: number
+  status_zaposlenja: string
+  period_zaposlenja: number
+  kontakt_telefon: string
+  broj_racuna: string
+  rok_otplate: number
+  datum_podnosenja: string
+  status: StatusZahteva
+}
