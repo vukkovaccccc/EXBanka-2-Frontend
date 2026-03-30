@@ -364,6 +364,10 @@ export interface CreatePaymentIntentResult {
   status: string
   valuta: string
   iznos: number
+  krajnji_iznos: number
+  provizija: number
+  kurs: number
+  valuta_primaoca: string
 }
 
 export interface PaymentHistoryFilter {

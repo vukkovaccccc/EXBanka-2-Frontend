@@ -4,6 +4,14 @@ import { CreditCard, ArrowUpDown, ChevronDown, ChevronUp, PlusCircle } from 'luc
 import { getClientAccounts, getAccountTransactions } from '@/services/bankaService'
 import type { AccountListItem, Transakcija } from '@/types'
 import KarticaWizardModal from './KarticaWizardModal'
+import { FALLBACK_RATES } from './menjacnica/exchangeRatesFallback'
+
+// Converts any currency amount to its RSD equivalent using mid rates
+function toRSD(amount: number, currency: string): number {
+  if (currency === 'RSD') return amount
+  const rate = FALLBACK_RATES.find((r) => r.oznaka === currency)
+  return rate ? amount * rate.srednji : amount
+}
 
 type SortBy = 'date' | 'type'
 type SortOrder = 'asc' | 'desc'
@@ -62,7 +70,9 @@ export default function AccountsPage() {
     setLoadingAccounts(true)
     getClientAccounts()
       .then((data) => {
-        const sorted = [...data].sort((a, b) => b.raspolozivo_stanje - a.raspolozivo_stanje)
+        const sorted = [...data].sort((a, b) =>
+          toRSD(b.raspolozivo_stanje, b.valuta_oznaka) - toRSD(a.raspolozivo_stanje, a.valuta_oznaka)
+        )
         setAccounts(sorted)
         if (sorted.length > 0) setSelectedId(sorted[0].id)
       })

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CheckCircle2, Download, XCircle } from 'lucide-react'
 import { getClientAccounts, getExchangeRate, createExchangeTransferIntent } from '@/services/bankaService'
-import { createTransferIntent, approvePendingAction, verifyAndExecutePayment } from '@/services/paymentService'
+import { createTransferIntent, verifyAndExecutePayment } from '@/services/paymentService'
 import type { AccountListItem, CreatePaymentIntentResult } from '@/types'
 import { downloadPaymentReceipt } from '@/utils/pdfReceipt'
 
@@ -39,7 +39,6 @@ export default function PrenosPage() {
   const [lockedOut, setLockedOut] = useState(false)
 
   const [completedPayment, setCompletedPayment] = useState<import('@/types').PaymentIntent | null>(null)
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null)
 
   useEffect(() => {
     getClientAccounts()
@@ -110,12 +109,16 @@ export default function PrenosPage() {
         })
         actionId = String(result.actionId)
         setPendingIntent({
-          intent_id:   result.intentId,
-          action_id:   actionId,
-          broj_naloga: result.brojNaloga,
-          status:      result.status,
-          valuta:      fromAccount?.valuta_oznaka ?? '',
-          iznos:       iznNum,
+          intent_id:       result.intentId,
+          action_id:       actionId,
+          broj_naloga:     result.brojNaloga,
+          status:          result.status,
+          valuta:          fromAccount?.valuta_oznaka ?? '',
+          iznos:           iznNum,
+          krajnji_iznos:   0,
+          provizija:       0,
+          kurs:            0,
+          valuta_primaoca: '',
         })
       } else {
         const result = await createTransferIntent({
@@ -128,8 +131,6 @@ export default function PrenosPage() {
         actionId = result.action_id
         setPendingIntent(result)
       }
-      const code = await approvePendingAction(actionId)
-      setGeneratedCode(code)
       setVerifyCode('')
       setStep('verify')
     } catch (err: unknown) {
@@ -160,7 +161,6 @@ export default function PrenosPage() {
       } else if (e.message?.includes('istekao')) {
         setVerifyError('Kod je istekao. Kreirajte novi nalog.')
         setPendingIntent(null)
-        setGeneratedCode(null)
         setStep('form')
       } else {
         const newCount = attemptCount + 1
@@ -215,7 +215,7 @@ export default function PrenosPage() {
               Pregled plaćanja
             </button>
             <button
-              onClick={() => { setStep('form'); setPendingIntent(null); setVerifyCode(''); setIznos(''); setSvrha(''); setCompletedPayment(null); setAttemptCount(0); setLockedOut(false); setGeneratedCode(null) }}
+              onClick={() => { setStep('form'); setPendingIntent(null); setVerifyCode(''); setIznos(''); setSvrha(''); setCompletedPayment(null); setAttemptCount(0); setLockedOut(false) }}
               className="btn btn-primary text-sm"
             >
               Novi prenos
@@ -233,7 +233,7 @@ export default function PrenosPage() {
       <div className="max-w-lg space-y-6">
         {!lockedOut && (
           <button
-            onClick={() => { setStep('confirm'); setPendingIntent(null); setAttemptCount(0); setLockedOut(false); setGeneratedCode(null) }}
+            onClick={() => { setStep('confirm'); setPendingIntent(null); setAttemptCount(0); setLockedOut(false) }}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" /> Nazad
@@ -251,7 +251,7 @@ export default function PrenosPage() {
             </div>
             <div className="flex justify-center">
               <button
-                onClick={() => { setStep('form'); setPendingIntent(null); setVerifyCode(''); setAttemptCount(0); setLockedOut(false); setVerifyError(null); setGeneratedCode(null) }}
+                onClick={() => { setStep('form'); setPendingIntent(null); setVerifyCode(''); setAttemptCount(0); setLockedOut(false); setVerifyError(null) }}
                 className="btn btn-primary"
               >
                 Nazad na prenos
@@ -260,19 +260,11 @@ export default function PrenosPage() {
           </div>
         ) : (
           <div className="card space-y-5">
-            {generatedCode ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center space-y-1">
-                <p className="text-sm font-semibold text-blue-800">Verifikacioni kod</p>
-                <p className="text-3xl font-mono font-bold tracking-widest text-blue-900">{generatedCode}</p>
-                <p className="text-xs text-blue-600">Kod važi 5 minuta</p>
-              </div>
-            ) : (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-1">
-                <p className="font-semibold">Nalog je kreiran — otvorite mobilnu aplikaciju</p>
-                <p>Pronađite zahtev u sekciji &ldquo;Pending Approvals&rdquo; i pritisnite &ldquo;Approve Transaction&rdquo;.</p>
-                <p>Mobilna aplikacija će vam prikazati 6-cifreni verifikacioni kod.</p>
-              </div>
-            )}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-1">
+              <p className="font-semibold">Nalog je kreiran — otvorite mobilnu aplikaciju</p>
+              <p>Pronađite zahtev u sekciji &ldquo;Pending Approvals&rdquo; i pritisnite &ldquo;Approve Transaction&rdquo;.</p>
+              <p>Mobilna aplikacija će vam prikazati 6-cifreni verifikacioni kod.</p>
+            </div>
 
             {pendingIntent && fromAccount && toAccount && (
               <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
@@ -288,10 +280,28 @@ export default function PrenosPage() {
                   </div>
                 </div>
                 <div className="flex justify-between pt-1 border-t border-gray-200">
-                  <span>Iznos</span>
+                  <span>Šaljete</span>
                   <span className="font-semibold">{formatAmount(pendingIntent.iznos, pendingIntent.valuta)}</span>
                 </div>
-                {isCrossCurrency && convertedAmount !== null && (
+                {/* Cross-currency breakdown from intent (new flow) */}
+                {pendingIntent.kurs > 0 && pendingIntent.valuta_primaoca && pendingIntent.valuta_primaoca !== pendingIntent.valuta && (
+                  <>
+                    <div className="flex justify-between text-gray-500">
+                      <span>Kurs konverzije</span>
+                      <span>1 {pendingIntent.valuta} = {pendingIntent.kurs.toFixed(4)} {pendingIntent.valuta_primaoca}</span>
+                    </div>
+                    <div className="flex justify-between text-orange-600">
+                      <span>Provizija (0.5%)</span>
+                      <span>{formatAmount(pendingIntent.provizija, pendingIntent.valuta_primaoca)}</span>
+                    </div>
+                    <div className="flex justify-between text-green-700 font-semibold">
+                      <span>Primalac dobija</span>
+                      <span>{formatAmount(pendingIntent.krajnji_iznos, pendingIntent.valuta_primaoca)}</span>
+                    </div>
+                  </>
+                )}
+                {/* Cross-currency fallback (old exchange flow) */}
+                {!(pendingIntent.kurs > 0) && isCrossCurrency && convertedAmount !== null && (
                   <div className="flex justify-between text-blue-700">
                     <span>Prima (konvertovano)</span>
                     <span className="font-semibold">{formatAmount(convertedAmount, toAccount.valuta_oznaka)}</span>
@@ -323,7 +333,7 @@ export default function PrenosPage() {
             <div className="flex gap-3 justify-end">
               <button
                 type="button"
-                onClick={() => { setStep('confirm'); setPendingIntent(null); setVerifyCode(''); setAttemptCount(0); setLockedOut(false); setGeneratedCode(null) }}
+                onClick={() => { setStep('confirm'); setPendingIntent(null); setVerifyCode(''); setAttemptCount(0); setLockedOut(false) }}
                 className="btn btn-secondary"
                 disabled={verifyLoading}
               >

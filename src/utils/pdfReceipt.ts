@@ -144,9 +144,7 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
 
   row('Iznos:', formatAmount(detail.iznos, detail.valuta), [30, 58, 138])
   if (detail.provizija > 0) row('Provizija banke:', formatAmount(detail.provizija, detail.valuta))
-  if (detail.krajnji_iznos > 0 && detail.krajnji_iznos !== detail.iznos) {
-    row('Ukupno zaduženo:', formatAmount(detail.krajnji_iznos, detail.valuta), [220, 38, 38])
-  }
+
 
   if (detail.sifra_placanja || detail.poziv_na_broj || detail.svrha_placanja) {
     y += 2

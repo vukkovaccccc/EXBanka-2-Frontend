@@ -21,6 +21,10 @@ interface BackendCreatePaymentIntentResponse {
   status: string
   valuta: string
   iznos: string | number
+  krajnjiIznos?: string | number
+  provizija?: string | number
+  kurs?: string | number
+  valutaPrimaoca?: string
 }
 
 interface BackendPaymentIntentItem {
@@ -121,12 +125,16 @@ export async function createPaymentIntent(params: {
     params
   )
   return {
-    intent_id:   String(res.intentId),
-    action_id:   String(res.actionId),
-    broj_naloga: res.brojNaloga,
-    status:      res.status,
-    valuta:      res.valuta,
-    iznos:       parseNum(res.iznos),
+    intent_id:      String(res.intentId),
+    action_id:      String(res.actionId),
+    broj_naloga:    res.brojNaloga,
+    status:         res.status,
+    valuta:         res.valuta,
+    iznos:          parseNum(res.iznos),
+    krajnji_iznos:  parseNum(res.krajnjiIznos),
+    provizija:      parseNum(res.provizija),
+    kurs:           parseNum(res.kurs),
+    valuta_primaoca: res.valutaPrimaoca ?? '',
   }
 }
 
@@ -144,12 +152,16 @@ export async function createTransferIntent(params: {
     params
   )
   return {
-    intent_id:   String(res.intentId),
-    action_id:   String(res.actionId),
-    broj_naloga: res.brojNaloga,
-    status:      res.status,
-    valuta:      res.valuta,
-    iznos:       parseNum(res.iznos),
+    intent_id:       String(res.intentId),
+    action_id:       String(res.actionId),
+    broj_naloga:     res.brojNaloga,
+    status:          res.status,
+    valuta:          res.valuta,
+    iznos:           parseNum(res.iznos),
+    krajnji_iznos:   parseNum(res.krajnjiIznos),
+    provizija:       parseNum(res.provizija),
+    kurs:            parseNum(res.kurs),
+    valuta_primaoca: res.valutaPrimaoca ?? '',
   }
 }
 
