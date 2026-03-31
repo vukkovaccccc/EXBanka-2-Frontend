@@ -30,6 +30,14 @@ export function decodeAccessToken(token: string): AuthUser | null {
   try {
     const payload = jwtDecode<JwtPayload>(token)
 
+    // DEBUG – remove before production
+    console.debug('[JWT payload]', {
+      sub: payload.sub,
+      email: payload.email,
+      user_type: payload.user_type,
+      permissions: payload.permissions,
+    })
+
     if (!payload.sub || !payload.email) {
       return null
     }

@@ -28,6 +28,9 @@ import KreditZahtevForm from '@/pages/client/krediti/KreditZahtevForm'
 import ZahteviZaKreditPage from '@/pages/employee/krediti/ZahteviZaKreditPage'
 import SviKreditiPage from '@/pages/employee/krediti/SviKreditiPage'
 
+// Employee – Aktuari
+import ActuaryManagement from '@/pages/employee/actuaries/ActuaryManagement'
+
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export default function AppRouter() {
@@ -60,6 +63,7 @@ export default function AppRouter() {
             <Route index element={<EmployeePage />} />
             <Route path="credits/requests" element={<ZahteviZaKreditPage />} />
             <Route path="credits/all" element={<SviKreditiPage />} />
+            <Route path="actuaries" element={<ActuaryManagement />} />
           </Route>
 
           {/* Client home */}

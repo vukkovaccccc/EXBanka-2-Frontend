@@ -73,12 +73,13 @@ export default function CreateEmployee() {
     setUsernameError(null)
 
     try {
-      await createEmployee(values)
-      const msg =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await createEmployee(values as any)
+      toast.success(
         values.user_type === 'ADMIN'
           ? 'Administrator uspješno kreiran. Email za aktivaciju je poslan.'
           : 'Zaposleni uspješno kreiran. Email za aktivaciju je poslan.'
-      toast.success(msg)
+      )
       navigate('/admin/employees', { replace: true })
     } catch (err) {
       const e = err as Error & { grpcCode?: number }
@@ -118,7 +119,7 @@ export default function CreateEmployee() {
         {/* ── Tip korisnika ─────────────────────────────────────────────── */}
         <div className="card mb-4">
           <h2 className="text-lg font-semibold text-gray-800 pb-2 border-b mb-4">Tip korisnika</h2>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
@@ -237,7 +238,7 @@ export default function CreateEmployee() {
             Odustani
           </Button>
           <Button type="submit" variant="primary" loading={isSubmitting} disabled={isSubmitting}>
-            {isAdmin ? 'Kreiraj administratora' : 'Kreiraj zaposlenog'}
+            {watchedUserType === 'ADMIN' ? 'Kreiraj administratora' : 'Kreiraj zaposlenog'}
           </Button>
         </div>
       </form>

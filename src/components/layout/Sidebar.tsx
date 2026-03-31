@@ -24,7 +24,8 @@ interface NavItem {
   to: string
   icon?: React.ReactNode
   roles: string[]
-  permission?: string
+  /** Show item only if user has ANY of these permissions */
+  permission?: string | string[]
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -92,7 +93,14 @@ const NAV_ITEMS: NavItem[] = [
     icon: <Landmark className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
-  
+  {
+    label: 'Upravljanje aktuarima',
+    to: '/employee/actuaries',
+    icon: <UserCheck className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+    permission: ['SUPERVISOR', 'ADMIN_PERMISSION'],
+  },
+
   // ── Client (text-only, no icons per spec) ──────────────────────────────
   { label: 'Početna',    to: '/client',           roles: ['CLIENT'] },
   { label: 'Računi',     to: '/client/accounts',  roles: ['CLIENT'] },
@@ -125,7 +133,10 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (!user?.userType || !item.roles.includes(user.userType)) return false
-    if (item.permission && !hasPermission(item.permission)) return false
+    if (item.permission) {
+      const perms = Array.isArray(item.permission) ? item.permission : [item.permission]
+      if (!perms.some((p) => hasPermission(p))) return false
+    }
     return true
   })
 
