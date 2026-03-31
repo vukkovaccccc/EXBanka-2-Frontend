@@ -48,6 +48,9 @@ import SviKreditiPage from '@/pages/employee/krediti/SviKreditiPage'
 // Employee – Aktuari
 import ActuaryManagement from '@/pages/employee/actuaries/ActuaryManagement'
 
+// Berze (shared: employees + clients)
+import ExchangesPage from '@/pages/employee/ExchangesPage'
+
 import NotFoundPage from '@/pages/NotFoundPage'
 
 const router = createBrowserRouter(
@@ -83,6 +86,7 @@ const router = createBrowserRouter(
             <Route path="credits/requests" element={<ZahteviZaKreditPage />} />
             <Route path="credits/all" element={<SviKreditiPage />} />
             <Route path="actuaries" element={<ActuaryManagement />} />
+            <Route path="exchanges" element={<ExchangesPage />} />
           </Route>
 
           {/* Client home */}
@@ -98,6 +102,7 @@ const router = createBrowserRouter(
             <Route path="credits" element={<KreditiPage />} />
             <Route path="credits/new" element={<KreditZahtevForm />} />
             <Route path="exchange" element={<MenjacnicaPage />} />
+            <Route path="exchanges" element={<ExchangesPage />} />
           </Route>
         </Route>
       </Route>

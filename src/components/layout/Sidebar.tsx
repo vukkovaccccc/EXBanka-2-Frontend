@@ -16,6 +16,7 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
+  TrendingUp,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -100,14 +101,21 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['EMPLOYEE'],
     permission: ['SUPERVISOR', 'ADMIN_PERMISSION'],
   },
+  {
+    label: 'Berze',
+    to: '/employee/exchanges',
+    icon: <TrendingUp className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
 
   // ── Client (text-only, no icons per spec) ──────────────────────────────
-  { label: 'Početna',    to: '/client',           roles: ['CLIENT'] },
-  { label: 'Računi',     to: '/client/accounts',  roles: ['CLIENT'] },
+  { label: 'Početna',    to: '/client',                                    roles: ['CLIENT'] },
+  { label: 'Računi',     to: '/client/accounts',                           roles: ['CLIENT'] },
   // NOTE: Plaćanja is rendered as a collapsible submenu below — not here
-  { label: 'Menjačnica', to: '/client/exchange',  roles: ['CLIENT'] },
-  { label: 'Kartice',    to: '/client/cards',     roles: ['CLIENT'] },
-  { label: 'Krediti',    to: '/client/credits',     roles: ['CLIENT'] },
+  { label: 'Menjačnica', to: '/client/exchange',                           roles: ['CLIENT'] },
+  { label: 'Kartice',    to: '/client/cards',                              roles: ['CLIENT'] },
+  { label: 'Krediti',    to: '/client/credits',                            roles: ['CLIENT'] },
+  { label: 'Berze',      to: '/client/exchanges', permission: 'TRADE_STOCKS', roles: ['CLIENT'] },
 ]
 
 const PAYMENT_SUB_ITEMS = [
