@@ -31,6 +31,9 @@ import SviKreditiPage from '@/pages/employee/krediti/SviKreditiPage'
 // Employee – Aktuari
 import ActuaryManagement from '@/pages/employee/actuaries/ActuaryManagement'
 
+// Berze (shared: employees + clients)
+import ExchangesPage from '@/pages/employee/ExchangesPage'
+
 import NotFoundPage from '@/pages/NotFoundPage'
 
 export default function AppRouter() {
@@ -64,6 +67,7 @@ export default function AppRouter() {
             <Route path="credits/requests" element={<ZahteviZaKreditPage />} />
             <Route path="credits/all" element={<SviKreditiPage />} />
             <Route path="actuaries" element={<ActuaryManagement />} />
+            <Route path="exchanges" element={<ExchangesPage />} />
           </Route>
 
           {/* Client home */}
@@ -75,6 +79,7 @@ export default function AppRouter() {
             <Route path="cards" element={<KarticeListaPage />} />
             <Route path="credits" element={<KreditiPage />} />
             <Route path="credits/new" element={<KreditZahtevForm />} />
+            <Route path="exchanges" element={<ExchangesPage />} />
           </Route>
         </Route>
       </Route>
