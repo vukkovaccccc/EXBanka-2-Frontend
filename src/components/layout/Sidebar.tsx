@@ -18,6 +18,9 @@ import {
   ChevronRight,
   TrendingUp,
   BarChart2,
+  ListOrdered,
+  ShieldCheck,
+  Receipt,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -115,9 +118,35 @@ const NAV_ITEMS: NavItem[] = [
     permission: ['SUPERVISOR'],
   },
   {
+    label: 'Nalozi (trading)',
+    to: '/employee/trading/orders',
+    icon: <ShieldCheck className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+    permission: ['SUPERVISOR'],
+  },
+  {
+    label: 'Porez Tracking',
+    to: '/employee/trading/tax',
+    icon: <Receipt className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+    permission: ['SUPERVISOR'],
+  },
+  {
     label: 'Upravljanje aktuarima',
     to: '/admin/actuaries',
     icon: <UserCheck className="h-5 w-5" />,
+    roles: ['ADMIN'],
+  },
+  {
+    label: 'Nalozi (trading)',
+    to: '/admin/trading/orders',
+    icon: <ShieldCheck className="h-5 w-5" />,
+    roles: ['ADMIN'],
+  },
+  {
+    label: 'Porez Tracking',
+    to: '/admin/trading/tax',
+    icon: <Receipt className="h-5 w-5" />,
     roles: ['ADMIN'],
   },
   {
@@ -132,6 +161,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <BarChart2 className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
+  {
+    label: 'Moji nalozi',
+    to: '/hartije/my-orders',
+    icon: <ListOrdered className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
 
   // ── Client (text-only, no icons per spec) ──────────────────────────────
   { label: 'Početna',    to: '/client',                                    roles: ['CLIENT'] },
@@ -142,6 +177,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Krediti',    to: '/client/credits',                            roles: ['CLIENT'] },
   { label: 'Berze',      to: '/client/exchanges',                           roles: ['CLIENT'] },
   { label: 'Hartije od vrednosti', to: '/hartije', roles: ['CLIENT'] },
+  { label: 'Moji nalozi',          to: '/hartije/my-orders', roles: ['CLIENT'] },
 ]
 
 const PAYMENT_SUB_ITEMS = [

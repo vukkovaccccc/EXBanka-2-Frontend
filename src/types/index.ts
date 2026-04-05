@@ -453,6 +453,67 @@ export interface KreditZahtev {
   status: StatusZahteva
 }
 
+// ─── Trading (Celina 3) ───────────────────────────────────────────────────────
+
+export type TradingOrderType = 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT'
+export type TradingOrderStatus = 'PENDING' | 'APPROVED' | 'DECLINED' | 'DONE' | 'CANCELED'
+export type TradingDirection = 'BUY' | 'SELL'
+
+export interface TradingOrder {
+  id: string
+  userId: string
+  accountId: string
+  listingId: string
+  orderType: TradingOrderType
+  direction: TradingDirection
+  quantity: number
+  contractSize: number
+  pricePerUnit?: string   // nil for MARKET orders
+  stopPrice?: string      // nil for MARKET and LIMIT orders
+  status: TradingOrderStatus
+  approvedBy?: string
+  isDone: boolean
+  remainingPortions: number
+  afterHours: boolean
+  allOrNone: boolean
+  margin: boolean
+  lastModified: string    // ISO 8601
+  createdAt: string       // ISO 8601
+}
+
+export interface TradingCalculateRequest {
+  orderType: TradingOrderType
+  direction: TradingDirection
+  listingId: string
+  quantity: number
+  contractSize: number
+  pricePerUnit?: string   // required for LIMIT, STOP_LIMIT
+  stopPrice?: string      // required for STOP, STOP_LIMIT
+  margin: boolean
+  allOrNone: boolean
+}
+
+export interface TradingCalculateResponse {
+  pricePerUnit: string
+  approximatePrice: string
+  commission: string
+  initialMarginCost?: string  // only when margin=true
+}
+
+export interface TradingCreateOrderRequest {
+  accountId: string
+  listingId: string
+  orderType: TradingOrderType
+  direction: TradingDirection
+  quantity: number
+  contractSize: number
+  pricePerUnit?: string
+  stopPrice?: string
+  afterHours: boolean
+  allOrNone: boolean
+  margin: boolean
+}
+
 // ─── Listings (Hartije od vrednosti) ─────────────────────────────────────────
 
 export type ListingType = 'STOCK' | 'FOREX' | 'FUTURE' | 'OPTION'
