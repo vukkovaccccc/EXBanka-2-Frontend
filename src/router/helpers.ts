@@ -15,6 +15,14 @@ export function hartijeKupovinaPath(id: string): string {
   return `${HARTIJE_BASE}/kupovina/${id}`
 }
 
+export function myTradingOrdersPath(): string {
+  return `${HARTIJE_BASE}/my-orders`
+}
+
+export function supervisorOrdersPath(): string {
+  return '/employee/trading/orders'
+}
+
 export function getHomeForRole(userType?: UserType): string {
   switch (userType) {
     case 'ADMIN':

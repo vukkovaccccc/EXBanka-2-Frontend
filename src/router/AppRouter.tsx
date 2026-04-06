@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import PrivateRoute from './PrivateRoute'
+import HartijePortalRoute from './HartijePortalRoute'
 import Layout from '@/components/layout/Layout'
 
 // Auth pages (public)
@@ -31,8 +32,18 @@ import SviKreditiPage from '@/pages/employee/krediti/SviKreditiPage'
 // Employee – Aktuari
 import ActuaryManagement from '@/pages/employee/actuaries/ActuaryManagement'
 
+// Employee – Trading (Celina 3)
+import SupervisorOrdersPage from '@/pages/employee/trading/SupervisorOrdersPage'
+import TaxTrackingPage from '@/pages/employee/trading/TaxTrackingPage'
+
 // Berze (shared: employees + clients)
 import ExchangesPage from '@/pages/employee/ExchangesPage'
+
+// Hartije od vrednosti (shared: all roles)
+import ListingsPage from '@/pages/client/listings/ListingsPage'
+import ListingDetailsPage from '@/pages/client/listings/ListingDetailsPage'
+import CreateOrderPage from '@/pages/client/listings/CreateOrderPage'
+import MyTradingOrdersPage from '@/pages/client/listings/MyTradingOrdersPage'
 
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -57,6 +68,8 @@ export default function AppRouter() {
             <Route path="employees/new" element={<CreateEmployee />} />
             <Route path="employees/:id/edit" element={<EditEmployee />} />
             <Route path="actuaries" element={<ActuaryManagement />} />
+            <Route path="trading/orders" element={<SupervisorOrdersPage />} />
+            <Route path="trading/tax" element={<TaxTrackingPage />} />
           </Route>
 
           {/* Employee home */}
@@ -69,6 +82,8 @@ export default function AppRouter() {
             <Route path="credits/all" element={<SviKreditiPage />} />
             <Route path="actuaries" element={<ActuaryManagement />} />
             <Route path="exchanges" element={<ExchangesPage />} />
+            <Route path="trading/orders" element={<SupervisorOrdersPage />} />
+            <Route path="trading/tax" element={<TaxTrackingPage />} />
           </Route>
 
           {/* Client home */}
@@ -81,6 +96,14 @@ export default function AppRouter() {
             <Route path="credits" element={<KreditiPage />} />
             <Route path="credits/new" element={<KreditZahtevForm />} />
             <Route path="exchanges" element={<ExchangesPage />} />
+          </Route>
+
+          {/* Hartije od vrednosti — shared portal (CLIENT, EMPLOYEE, ADMIN) */}
+          <Route path="/hartije" element={<HartijePortalRoute />}>
+            <Route index element={<ListingsPage />} />
+            <Route path=":id" element={<ListingDetailsPage />} />
+            <Route path="kupovina/:id" element={<CreateOrderPage />} />
+            <Route path="my-orders" element={<MyTradingOrdersPage />} />
           </Route>
         </Route>
       </Route>

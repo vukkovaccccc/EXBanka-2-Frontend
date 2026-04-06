@@ -20,7 +20,12 @@
       "Bash(python3 -c \"import zipfile; zipfile.ZipFile\\(''protoc-28.0-linux-x86_64.zip''\\).extractall\\(''$HOME/.local''\\)\")",
       "Bash(chmod +x $HOME/.local/bin/protoc)",
       "Bash(PATH=$HOME/.local/bin:$HOME/go/bin:$PATH make proto)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm install:*)",
+      "Read(//home/vuk/.nvm/versions/**)",
+      "Read(//usr/local/lib/**)"
     ]
   }
 }
