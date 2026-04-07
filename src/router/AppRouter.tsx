@@ -101,9 +101,9 @@ export default function AppRouter() {
           {/* Hartije od vrednosti — shared portal (CLIENT, EMPLOYEE, ADMIN) */}
           <Route path="/hartije" element={<HartijePortalRoute />}>
             <Route index element={<ListingsPage />} />
-            <Route path=":id" element={<ListingDetailsPage />} />
-            <Route path="kupovina/:id" element={<CreateOrderPage />} />
             <Route path="my-orders" element={<MyTradingOrdersPage />} />
+            <Route path="kupovina/:id" element={<CreateOrderPage />} />
+            <Route path=":id" element={<ListingDetailsPage />} />
           </Route>
         </Route>
       </Route>

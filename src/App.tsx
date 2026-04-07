@@ -56,6 +56,7 @@ import ExchangesPage from '@/pages/employee/ExchangesPage'
 import ListingsPage from '@/pages/client/listings/ListingsPage'
 import ListingDetailsPage from '@/pages/client/listings/ListingDetailsPage'
 import CreateOrderPage from '@/pages/client/listings/CreateOrderPage'
+import MyTradingOrdersPage from '@/pages/client/listings/MyTradingOrdersPage'
 
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -98,8 +99,9 @@ const router = createBrowserRouter(
           {/* Employee home */}
           <Route element={<HartijePortalRoute />}>
             <Route path="/hartije" element={<ListingsPage />} />
-            <Route path="/hartije/:id" element={<ListingDetailsPage />} />
+            <Route path="/hartije/my-orders" element={<MyTradingOrdersPage />} />
             <Route path="/hartije/kupovina/:id" element={<CreateOrderPage />} />
+            <Route path="/hartije/:id" element={<ListingDetailsPage />} />
           </Route>
 
           <Route path="/employee" element={<PrivateRoute requiredRole="EMPLOYEE" />}>
