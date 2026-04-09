@@ -131,12 +131,23 @@ export async function createTradingOrder(
 
 // ─── TradingListOrders ────────────────────────────────────────────────────────
 
-/** Lists orders. Pass a status to filter; omit for all orders. Employee only. */
+/** Lists ALL orders (supervisor/admin dashboard). Pass a status to filter. */
 export async function listTradingOrders(
   status?: TradingOrderStatus
 ): Promise<TradingOrder[]> {
   const res = await apiGet<{ orders: BackendTradingOrder[] | null }>(
     '/bank/trading/orders',
+    status ? { status } : undefined
+  )
+  return (res.orders ?? []).map(mapOrder)
+}
+
+/** Lists only the caller's own orders (Moji nalozi — all roles). */
+export async function listMyTradingOrders(
+  status?: TradingOrderStatus
+): Promise<TradingOrder[]> {
+  const res = await apiGet<{ orders: BackendTradingOrder[] | null }>(
+    '/bank/trading/my-orders',
     status ? { status } : undefined
   )
   return (res.orders ?? []).map(mapOrder)

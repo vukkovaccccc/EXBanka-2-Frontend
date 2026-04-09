@@ -60,11 +60,15 @@ export default function CreateEmployee() {
 
   const togglePermission = (permName: string) => {
     const current = watchedPermissions
-    setValue(
-      'permissions',
-      current.includes(permName) ? current.filter((p) => p !== permName) : [...current, permName],
-      { shouldDirty: true }
-    )
+    if (current.includes(permName)) {
+      setValue('permissions', current.filter((p) => p !== permName), { shouldDirty: true })
+    } else {
+      // Mutual exclusivity: SUPERVISOR ↔ AGENT
+      let next = [...current, permName]
+      if (permName === 'SUPERVISOR') next = next.filter((p) => p !== 'AGENT')
+      if (permName === 'AGENT')      next = next.filter((p) => p !== 'SUPERVISOR')
+      setValue('permissions', next, { shouldDirty: true })
+    }
   }
 
   const onSubmit = async (values: FormValues) => {

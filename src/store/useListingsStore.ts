@@ -75,7 +75,11 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
   },
 
   setFilters: (partial: Partial<ListingsFilter>) => {
-    set((state) => ({ filters: { ...state.filters, ...partial, page: 1 } }))
+    // Resetuj na stranicu 1 samo ako se mijenja filter koji nije sama stranica
+    const resetPage = !Object.prototype.hasOwnProperty.call(partial, 'page')
+    set((state) => ({
+      filters: { ...state.filters, ...partial, ...(resetPage ? { page: 1 } : {}) },
+    }))
   },
 
   clearSelected: () => set({ selectedListing: null, priceHistory: [] }),

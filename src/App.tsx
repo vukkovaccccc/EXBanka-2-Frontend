@@ -49,6 +49,10 @@ import SviKreditiPage from '@/pages/employee/krediti/SviKreditiPage'
 // Employee – Aktuari
 import ActuaryManagement from '@/pages/employee/actuaries/ActuaryManagement'
 
+// Employee – Trading
+import TaxTrackingPage from '@/pages/employee/trading/TaxTrackingPage'
+import SupervisorOrdersPage from '@/pages/employee/trading/SupervisorOrdersPage'
+
 // Berze (shared: employees + clients)
 import ExchangesPage from '@/pages/employee/ExchangesPage'
 
@@ -57,6 +61,9 @@ import ListingsPage from '@/pages/client/listings/ListingsPage'
 import ListingDetailsPage from '@/pages/client/listings/ListingDetailsPage'
 import CreateOrderPage from '@/pages/client/listings/CreateOrderPage'
 import MyTradingOrdersPage from '@/pages/client/listings/MyTradingOrdersPage'
+
+// Portfolio (clients + actuaries)
+import MojPortfolioPage from '@/pages/client/portfolio/MojPortfolioPage'
 
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -94,6 +101,8 @@ const router = createBrowserRouter(
             <Route path="employees/:id/edit" element={<EditEmployee />} />
             <Route path="exchanges" element={<ExchangesPage />} />
             <Route path="actuaries" element={<ActuaryManagement />} />
+            <Route path="trading/tax" element={<TaxTrackingPage />} />
+            <Route path="trading/orders" element={<SupervisorOrdersPage />} />
           </Route>
 
           {/* Employee home */}
@@ -117,7 +126,12 @@ const router = createBrowserRouter(
             <Route path="credits/all" element={<SviKreditiPage />} />
             <Route path="actuaries" element={<ActuaryManagement />} />
             <Route path="exchanges" element={<ExchangesPage />} />
+            <Route path="trading/tax" element={<TaxTrackingPage />} />
+            <Route path="trading/orders" element={<SupervisorOrdersPage />} />
           </Route>
+
+          {/* Portfolio – shared between CLIENT and EMPLOYEE (actuaries) */}
+          <Route path="/portfolio" element={<MojPortfolioPage />} />
 
           {/* Client home */}
           <Route path="/client" element={<PrivateRoute requiredRole="CLIENT" />}>

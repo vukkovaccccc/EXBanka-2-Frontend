@@ -161,7 +161,7 @@ function CreateActuaryDialog({
   }, [open])
 
   const available = employees.filter(
-    (e) => e.is_active && !existingAgentIds.has(e.id)
+    (e) => e.is_active && !existingAgentIds.has(e.id) && !e.permissions.includes('SUPERVISOR')
   )
 
   async function handleSubmit(e: React.FormEvent) {

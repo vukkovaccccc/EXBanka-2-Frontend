@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { RefreshCw, Ban, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { listTradingOrders, cancelTradingOrder } from '@/services/tradingService'
+import { listMyTradingOrders, cancelTradingOrder } from '@/services/tradingService'
 import type { TradingOrder, TradingOrderStatus } from '@/types'
 import Button from '@/components/common/Button'
 import Dialog from '@/components/common/Dialog'
@@ -173,7 +173,7 @@ export default function MyTradingOrdersPage() {
     setLoading(true)
     setError(null)
     try {
-      const result = await listTradingOrders(statusFilter || undefined)
+      const result = await listMyTradingOrders(statusFilter || undefined)
       setOrders(result)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Greška pri učitavanju naloga.'
@@ -186,6 +186,8 @@ export default function MyTradingOrdersPage() {
 
   useEffect(() => {
     fetchOrders()
+    const interval = setInterval(fetchOrders, 10_000)
+    return () => clearInterval(interval)
   }, [fetchOrders])
 
   const handleCancelConfirm = async () => {

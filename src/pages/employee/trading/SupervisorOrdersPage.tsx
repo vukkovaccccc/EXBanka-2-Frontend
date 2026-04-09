@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, Link } from 'react-router-dom'
 import { RefreshCw, CheckCircle, XCircle, Ban, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -9,6 +9,8 @@ import {
   declineTradingOrder,
   cancelTradingOrder,
 } from '@/services/tradingService'
+import { getClientById } from '@/services/clientService'
+import { getEmployeeById } from '@/services/employeeService'
 import type { TradingOrder, TradingOrderStatus } from '@/types'
 import Button from '@/components/common/Button'
 import Dialog from '@/components/common/Dialog'
@@ -173,6 +175,7 @@ export default function SupervisorOrdersPage() {
   }
 
   const [orders, setOrders] = useState<TradingOrder[]>([])
+  const [userNames, setUserNames] = useState<Record<string, string>>({})
   const [statusFilter, setStatusFilter] = useState<TradingOrderStatus | ''>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -184,12 +187,47 @@ export default function SupervisorOrdersPage() {
   const [cancelTarget, setCancelTarget] = useState<TradingOrder | null>(null)
   const [cancelLoading, setCancelLoading] = useState(false)
 
+  // Track which user IDs we've already fetched to avoid redundant calls
+  const fetchedUserIds = useRef<Set<string>>(new Set())
+
+  const enrichUserNames = useCallback(async (newOrders: TradingOrder[]) => {
+    const missing = [...new Set(newOrders.map((o) => String(o.userId)))].filter(
+      (id) => !fetchedUserIds.current.has(id),
+    )
+    if (missing.length === 0) return
+
+    const results = await Promise.allSettled(
+      missing.map(async (id) => {
+        try {
+          const c = await getClientById(id)
+          return { id, name: `${c.first_name} ${c.last_name}` }
+        } catch {
+          const e = await getEmployeeById({ id })
+          return { id, name: `${e.first_name} ${e.last_name}` }
+        }
+      }),
+    )
+
+    const map: Record<string, string> = {}
+    results.forEach((r, i) => {
+      const id = missing[i]
+      fetchedUserIds.current.add(id)
+      if (r.status === 'fulfilled') {
+        map[id] = r.value.name
+      } else {
+        map[id] = `#${id}`
+      }
+    })
+    setUserNames((prev) => ({ ...prev, ...map }))
+  }, [])
+
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const result = await listTradingOrders(statusFilter || undefined)
       setOrders(result)
+      enrichUserNames(result)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Greška pri učitavanju naloga.'
       setError(msg)
@@ -197,10 +235,12 @@ export default function SupervisorOrdersPage() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter])
+  }, [statusFilter, enrichUserNames])
 
   useEffect(() => {
     fetchOrders()
+    const interval = setInterval(fetchOrders, 10_000)
+    return () => clearInterval(interval)
   }, [fetchOrders])
 
   const handleApprove = async (order: TradingOrder) => {
@@ -328,7 +368,7 @@ export default function SupervisorOrdersPage() {
                     return (
                       <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                         <Td mono>#{order.id}</Td>
-                        <Td mono>{order.userId}</Td>
+                        <Td>{userNames[String(order.userId)] ?? <span className="text-gray-400 font-mono text-xs">#{order.userId}</span>}</Td>
                         <Td>
                           <Link
                             to={hartijeDetailPath(order.listingId)}

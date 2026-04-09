@@ -330,9 +330,31 @@ export default function ListingsPage() {
               </table>
             </div>
 
-            {/* Footer sa brojem rezultata */}
-            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 text-xs text-gray-400">
-              Prikazano {listings.length} od {total} hartija
+            {/* Footer sa paginacijom */}
+            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+              <span className="text-xs text-gray-400">
+                Prikazano {((filters.page ?? 1) - 1) * (filters.pageSize ?? 50) + 1}–
+                {Math.min((filters.page ?? 1) * (filters.pageSize ?? 50), total)} od {total} hartija
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setFilters({ page: Math.max(1, (filters.page ?? 1) - 1) })}
+                  disabled={(filters.page ?? 1) <= 1 || loading}
+                  className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  ‹ Prethodno
+                </button>
+                <span className="text-xs text-gray-500">
+                  Str. {filters.page ?? 1} / {Math.max(1, Math.ceil(total / (filters.pageSize ?? 50)))}
+                </span>
+                <button
+                  onClick={() => setFilters({ page: (filters.page ?? 1) + 1 })}
+                  disabled={(filters.page ?? 1) >= Math.ceil(total / (filters.pageSize ?? 50)) || loading}
+                  className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Sledeće ›
+                </button>
+              </div>
             </div>
           </>
         )}

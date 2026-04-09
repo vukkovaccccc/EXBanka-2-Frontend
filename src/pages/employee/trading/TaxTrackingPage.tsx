@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Calculator, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -7,37 +7,21 @@ import { getHomeForRole } from '@/router/helpers'
 import Button from '@/components/common/Button'
 import Dialog from '@/components/common/Dialog'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import { getTaxUsers, calculateAndCollectTax } from '@/services/portfolioService'
+import { getClients } from '@/services/clientService'
+import { getAgents } from '@/services/actuaryService'
+import type { TaxUserRecord } from '@/services/portfolioService'
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Enriched record (adds display name) ─────────────────────────────────────
 
 type UserType = 'CLIENT' | 'ACTUARY'
+type UserTypeFilter = 'ALL' | UserType
 
 interface TaxRecord {
-  id: string
-  firstName: string
-  lastName: string
+  userId: string
+  displayName: string
   userType: UserType
-  taxDebt: number  // RSD
-}
-
-const MOCK_TAX_RECORDS: TaxRecord[] = [
-  { id: '1',  firstName: 'Marko',    lastName: 'Petrović',  userType: 'CLIENT',  taxDebt: 142_500 },
-  { id: '2',  firstName: 'Jelena',   lastName: 'Nikolić',   userType: 'CLIENT',  taxDebt: 87_300 },
-  { id: '3',  firstName: 'Stefan',   lastName: 'Jovanović', userType: 'ACTUARY', taxDebt: 315_200 },
-  { id: '4',  firstName: 'Ana',      lastName: 'Đorđević',  userType: 'CLIENT',  taxDebt: 0 },
-  { id: '5',  firstName: 'Nikola',   lastName: 'Stanković', userType: 'ACTUARY', taxDebt: 229_750 },
-  { id: '6',  firstName: 'Milica',   lastName: 'Popović',   userType: 'CLIENT',  taxDebt: 56_000 },
-  { id: '7',  firstName: 'Aleksandar', lastName: 'Ilić',    userType: 'ACTUARY', taxDebt: 478_900 },
-  { id: '8',  firstName: 'Ivana',    lastName: 'Marković',  userType: 'CLIENT',  taxDebt: 193_600 },
-  { id: '9',  firstName: 'Luka',     lastName: 'Lazarević', userType: 'CLIENT',  taxDebt: 11_250 },
-  { id: '10', firstName: 'Maja',     lastName: 'Savić',     userType: 'ACTUARY', taxDebt: 0 },
-]
-
-// ─── Simulated tax calculation API ───────────────────────────────────────────
-
-// TODO: Wire up to real Tax API
-async function runTaxCalculation(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 2000))
+  taxDebt: number
 }
 
 // ─── Table helpers ────────────────────────────────────────────────────────────
@@ -101,8 +85,6 @@ function DebtCell({ amount }: { amount: number }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type UserTypeFilter = 'ALL' | UserType
-
 export default function TaxTrackingPage() {
   const { user, hasPermission } = useAuthStore()
 
@@ -113,6 +95,10 @@ export default function TaxTrackingPage() {
     return <Navigate to={getHomeForRole(user?.userType)} replace />
   }
 
+  const [records, setRecords] = useState<TaxRecord[]>([])
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [loading, setLoading] = useState(true)
+
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<UserTypeFilter>('ALL')
 
@@ -120,35 +106,92 @@ export default function TaxTrackingPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [calculating, setCalculating] = useState(false)
 
+  // ─── Load data ──────────────────────────────────────────────────────────────
+
+  async function loadData() {
+    setLoading(true)
+    try {
+      const [taxRes, clientsRes, agentsRes] = await Promise.all([
+        getTaxUsers(),
+        getClients({ limit: 1000 }),
+        getAgents({}),
+      ])
+
+      // Build name lookup maps keyed by string ID
+      const clientMap = new Map<string, string>()
+      for (const c of clientsRes.clients) {
+        clientMap.set(c.id, `${c.first_name} ${c.last_name}`)
+      }
+
+      const agentMap = new Map<string, string>()
+      for (const a of agentsRes.agents) {
+        agentMap.set(a.employee_id, `${a.first_name} ${a.last_name}`)
+      }
+
+      const enriched: TaxRecord[] = taxRes.users.map((u: TaxUserRecord) => {
+        const ut = u.userType as UserType
+        let displayName: string
+        if (ut === 'CLIENT') {
+          displayName = clientMap.get(u.userId) ?? `Klijent #${u.userId}`
+        } else {
+          displayName = agentMap.get(u.userId) ?? `Aktuar #${u.userId}`
+        }
+        return {
+          userId: u.userId,
+          displayName,
+          userType: ut,
+          taxDebt: u.taxDebt,
+        }
+      })
+
+      setRecords(enriched)
+      setTotalUsers(enriched.length)
+    } catch {
+      toast.error('Greška pri učitavanju poreskih dugovanja.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { loadData() }, [])
+
+  // ─── Filtering ──────────────────────────────────────────────────────────────
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
-    return MOCK_TAX_RECORDS.filter((r) => {
+    return records.filter((r) => {
       if (typeFilter !== 'ALL' && r.userType !== typeFilter) return false
-      if (term) {
-        const full = `${r.firstName} ${r.lastName}`.toLowerCase()
-        if (!full.includes(term)) return false
-      }
+      if (term && !r.displayName.toLowerCase().includes(term)) return false
       return true
     })
-  }, [search, typeFilter])
+  }, [records, search, typeFilter])
 
   const totalDebt = useMemo(
     () => filtered.reduce((sum, r) => sum + r.taxDebt, 0),
     [filtered]
   )
 
+  // ─── Tax calculation ────────────────────────────────────────────────────────
+
   const handleConfirmCalculation = async () => {
     setCalculating(true)
     try {
-      await runTaxCalculation()
+      const result = await calculateAndCollectTax()
       setConfirmOpen(false)
-      toast.success('Obračun poreza uspešno pokrenut.')
+      toast.success(
+        result.message ||
+          `Obračun završen. Obrađeno ${result.processedUsers} korisnika.`
+      )
+      // Reload to show updated debts
+      await loadData()
     } catch {
       toast.error('Greška pri pokretanju obračuna poreza.')
     } finally {
       setCalculating(false)
     }
   }
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -194,9 +237,15 @@ export default function TaxTrackingPage() {
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow overflow-hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-gray-400 text-sm">
-            Nema korisnika koji odgovaraju zadatom filteru.
+            {records.length === 0
+              ? 'Nema evidentiranih poreskih dugovanja.'
+              : 'Nema korisnika koji odgovaraju zadatom filteru.'}
           </div>
         ) : (
           <>
@@ -211,10 +260,10 @@ export default function TaxTrackingPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filtered.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={record.userId} className="hover:bg-gray-50 transition-colors">
                       <Td>
                         <span className="font-medium text-gray-900">
-                          {record.firstName} {record.lastName}
+                          {record.displayName}
                         </span>
                       </Td>
                       <Td>
@@ -231,7 +280,7 @@ export default function TaxTrackingPage() {
 
             {/* Footer: count + total */}
             <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5 flex items-center justify-between text-xs text-gray-500">
-              <span>Prikazano {filtered.length} od {MOCK_TAX_RECORDS.length} korisnika</span>
+              <span>Prikazano {filtered.length} od {totalUsers} korisnika</span>
               <span>
                 Ukupno dugovanje:{' '}
                 <span className="font-semibold text-gray-800">
