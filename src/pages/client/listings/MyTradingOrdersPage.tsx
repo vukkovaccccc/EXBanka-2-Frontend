@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { RefreshCw, Ban, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { listMyTradingOrders, cancelTradingOrder } from '@/services/tradingService'
@@ -7,7 +7,9 @@ import type { TradingOrder, TradingOrderStatus } from '@/types'
 import Button from '@/components/common/Button'
 import Dialog from '@/components/common/Dialog'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
-import { hartijeDetailPath } from '@/router/helpers'
+import { hartijeDetailPath, hartijeListPath } from '@/router/helpers'
+import { useAuthStore } from '@/store/authStore'
+import { useActuaryAccess } from '@/context/ActuaryAccessContext'
 
 // ─── Table helpers ────────────────────────────────────────────────────────────
 
@@ -161,6 +163,8 @@ function ConfirmCancelDialog({ order, loading, onConfirm, onClose }: ConfirmCanc
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function MyTradingOrdersPage() {
+  const user = useAuthStore((s) => s.user)
+  const { canAccessTradingPortals } = useActuaryAccess()
   const [orders, setOrders] = useState<TradingOrder[]>([])
   const [statusFilter, setStatusFilter] = useState<TradingOrderStatus | ''>('')
   const [loading, setLoading] = useState(false)
@@ -185,10 +189,11 @@ export default function MyTradingOrdersPage() {
   }, [statusFilter])
 
   useEffect(() => {
+    if (user?.userType === 'CLIENT' && !canAccessTradingPortals) return
     fetchOrders()
     const interval = setInterval(fetchOrders, 10_000)
     return () => clearInterval(interval)
-  }, [fetchOrders])
+  }, [fetchOrders, user?.userType, canAccessTradingPortals])
 
   const handleCancelConfirm = async () => {
     if (!cancelTarget) return
@@ -203,6 +208,10 @@ export default function MyTradingOrdersPage() {
     } finally {
       setCancelLoading(false)
     }
+  }
+
+  if (user?.userType === 'CLIENT' && !canAccessTradingPortals) {
+    return <Navigate to={hartijeListPath()} replace />
   }
 
   return (
@@ -279,7 +288,7 @@ export default function MyTradingOrdersPage() {
                     <Th right>Kontr. vel.</Th>
                     <Th right>Cena / jed.</Th>
                     <Th right>Stop cena</Th>
-                    <Th right>Preostalo</Th>
+                    <Th right>Popunjeno</Th>
                     <Th>Status</Th>
                     <Th>Kreirano</Th>
                     <Th right>Akcije</Th>
@@ -320,7 +329,22 @@ export default function MyTradingOrdersPage() {
                             ? `$${parseFloat(order.stopPrice).toFixed(4)}`
                             : '—'}
                         </Td>
-                        <Td right>{order.remainingPortions}</Td>
+                        <Td right>
+                          {(() => {
+                            const filled = order.quantity - order.remainingPortions
+                            const pct = order.quantity > 0 ? Math.round((filled / order.quantity) * 100) : 0
+                            return (
+                              <>
+                                <span className="text-xs text-gray-500">{filled}/{order.quantity}</span>
+                                {order.status === 'APPROVED' && (
+                                  <div className="w-16 h-1 bg-gray-100 rounded-full mt-1 ml-auto">
+                                    <div className="h-1 bg-primary-500 rounded-full" style={{ width: `${pct}%` }} />
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
+                        </Td>
                         <Td>
                           <StatusBadge status={order.status} />
                         </Td>

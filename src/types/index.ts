@@ -472,6 +472,7 @@ export interface TradingOrder {
   stopPrice?: string      // nil for MARKET and LIMIT orders
   status: TradingOrderStatus
   approvedBy?: string
+  approvedByLabel?: string  // "No need for approval" when auto-approved; supervisor ID otherwise
   isDone: boolean
   remainingPortions: number
   afterHours: boolean
@@ -543,7 +544,8 @@ export interface ListingDetail {
 }
 
 export interface ListingHistoryItem {
-  date: string             // "YYYY-MM-DD"
+  /** "YYYY-MM-DD" ili RFC3339 za intradnevne tačke */
+  date: string
   price: number
   askHigh: number
   bidLow: number

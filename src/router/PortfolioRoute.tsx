@@ -1,26 +1,20 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
-import { getHomeForRole } from '@/router/helpers'
 import { useActuaryAccess } from '@/context/ActuaryAccessContext'
+import { getHomeForRole } from '@/router/helpers'
+import MojPortfolioPage from '@/pages/client/portfolio/MojPortfolioPage'
 
 /**
- * Hartije: svi ulogovani klijenti i admini mogu listu/detajle (pregled).
- * Zaposleni koji nisu aktuari — presmerovanje na /employee.
- * TRADE_STOCKS se proverava na kupovini / mojim nalozima, ne ovde.
+ * Portfolio: klijenti i admini uvek; zaposleni samo ako su aktuari.
  */
-export default function HartijePortalRoute() {
+export default function PortfolioRoute() {
   const user = useAuthStore((s) => s.user)
   const { loading, canAccessTradingPortals } = useActuaryAccess()
 
   if (!user) return null
-  if (user.userType !== 'CLIENT' && user.userType !== 'EMPLOYEE' && user.userType !== 'ADMIN') {
-    return <Navigate to={getHomeForRole(user.userType)} replace />
-  }
-
   if (user.userType === 'CLIENT' || user.userType === 'ADMIN') {
-    return <Outlet />
+    return <MojPortfolioPage />
   }
-
   if (user.userType === 'EMPLOYEE' && loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh] text-gray-500 text-sm">
@@ -28,8 +22,11 @@ export default function HartijePortalRoute() {
       </div>
     )
   }
-  if (!canAccessTradingPortals) {
+  if (user.userType === 'EMPLOYEE' && !canAccessTradingPortals) {
     return <Navigate to={getHomeForRole(user.userType)} replace />
   }
-  return <Outlet />
+  if (user.userType === 'EMPLOYEE') {
+    return <MojPortfolioPage />
+  }
+  return <Navigate to={getHomeForRole(user.userType)} replace />
 }

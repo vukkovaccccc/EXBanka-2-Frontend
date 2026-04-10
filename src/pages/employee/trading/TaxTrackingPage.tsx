@@ -99,7 +99,8 @@ export default function TaxTrackingPage() {
   const [totalUsers, setTotalUsers] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  const [search, setSearch] = useState('')
+  const [filterFirstName, setFilterFirstName] = useState('')
+  const [filterLastName, setFilterLastName] = useState('')
   const [typeFilter, setTypeFilter] = useState<UserTypeFilter>('ALL')
 
   // Confirm dialog
@@ -112,7 +113,10 @@ export default function TaxTrackingPage() {
     setLoading(true)
     try {
       const [taxRes, clientsRes, agentsRes] = await Promise.all([
-        getTaxUsers(),
+        getTaxUsers({
+          firstName: filterFirstName.trim() || undefined,
+          lastName: filterLastName.trim() || undefined,
+        }),
         getClients({ limit: 1000 }),
         getAgents({}),
       ])
@@ -130,8 +134,11 @@ export default function TaxTrackingPage() {
 
       const enriched: TaxRecord[] = taxRes.users.map((u: TaxUserRecord) => {
         const ut = u.userType as UserType
+        const fromApi = [u.firstName, u.lastName].filter(Boolean).join(' ').trim()
         let displayName: string
-        if (ut === 'CLIENT') {
+        if (fromApi) {
+          displayName = fromApi
+        } else if (ut === 'CLIENT') {
           displayName = clientMap.get(u.userId) ?? `Klijent #${u.userId}`
         } else {
           displayName = agentMap.get(u.userId) ?? `Aktuar #${u.userId}`
@@ -153,18 +160,18 @@ export default function TaxTrackingPage() {
     }
   }
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+  }, [filterFirstName, filterLastName])
 
   // ─── Filtering ──────────────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase()
     return records.filter((r) => {
       if (typeFilter !== 'ALL' && r.userType !== typeFilter) return false
-      if (term && !r.displayName.toLowerCase().includes(term)) return false
       return true
     })
-  }, [records, search, typeFilter])
+  }, [records, typeFilter])
 
   const totalDebt = useMemo(
     () => filtered.reduce((sum, r) => sum + r.taxDebt, 0),
@@ -213,14 +220,24 @@ export default function TaxTrackingPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[160px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <input
             type="text"
-            placeholder="Pretraži po imenu ili prezimenu…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ime (server filter)"
+            value={filterFirstName}
+            onChange={(e) => setFilterFirstName(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
+          />
+        </div>
+        <div className="relative flex-1 min-w-[160px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Prezime (server filter)"
+            value={filterLastName}
+            onChange={(e) => setFilterLastName(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
           />
         </div>

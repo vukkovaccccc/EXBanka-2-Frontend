@@ -354,7 +354,11 @@ export default function SupervisorOrdersPage() {
                     <Th right>Količina</Th>
                     <Th right>Kontr. veličina</Th>
                     <Th right>Cena / jed.</Th>
-                    <Th right>Preostalo</Th>
+                    <Th>Stop</Th>
+                    <Th>Margin</Th>
+                    <Th>AON</Th>
+                    <Th>Van sata</Th>
+                    <Th right>Popunjeno</Th>
                     <Th>Status</Th>
                     <Th>Poslednja izmena</Th>
                     <Th right>Akcije</Th>
@@ -393,7 +397,30 @@ export default function SupervisorOrdersPage() {
                             ? `$${parseFloat(order.pricePerUnit).toFixed(4)}`
                             : '—'}
                         </Td>
-                        <Td right>{order.remainingPortions}</Td>
+                        <Td mono>
+                          {order.stopPrice
+                            ? `$${parseFloat(order.stopPrice).toFixed(4)}`
+                            : '—'}
+                        </Td>
+                        <Td>{order.margin ? 'Da' : 'Ne'}</Td>
+                        <Td>{order.allOrNone ? 'Da' : 'Ne'}</Td>
+                        <Td>{order.afterHours ? 'Da' : 'Ne'}</Td>
+                        <Td right>
+                          {(() => {
+                            const filled = order.quantity - order.remainingPortions
+                            const pct = order.quantity > 0 ? Math.round((filled / order.quantity) * 100) : 0
+                            return (
+                              <>
+                                <span className="text-xs text-gray-500">{filled}/{order.quantity}</span>
+                                {order.status === 'APPROVED' && (
+                                  <div className="w-16 h-1 bg-gray-100 rounded-full mt-1 ml-auto">
+                                    <div className="h-1 bg-primary-500 rounded-full" style={{ width: `${pct}%` }} />
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
+                        </Td>
                         <Td>
                           <StatusBadge status={order.status} />
                         </Td>

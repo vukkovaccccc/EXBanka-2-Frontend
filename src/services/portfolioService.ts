@@ -64,6 +64,8 @@ export async function exerciseOption(listingId: string): Promise<ExerciseResult>
 export interface TaxUserRecord {
   userId: string
   userType: 'CLIENT' | 'ACTUARY'
+  firstName?: string
+  lastName?: string
   taxDebt: number
 }
 
@@ -71,8 +73,16 @@ export interface TaxUsersResponse {
   users: TaxUserRecord[]
 }
 
-export async function getTaxUsers(): Promise<TaxUsersResponse> {
-  const res = await apiGet<TaxUsersResponse>('/bank/tax/users')
+export async function getTaxUsers(params?: {
+  firstName?: string
+  lastName?: string
+}): Promise<TaxUsersResponse> {
+  const q = new URLSearchParams()
+  if (params?.firstName?.trim()) q.set('firstName', params.firstName.trim())
+  if (params?.lastName?.trim()) q.set('lastName', params.lastName.trim())
+  const qs = q.toString()
+  const path = qs ? `/bank/tax/users?${qs}` : '/bank/tax/users'
+  const res = await apiGet<TaxUsersResponse>(path)
   return { users: res.users ?? [] }
 }
 
