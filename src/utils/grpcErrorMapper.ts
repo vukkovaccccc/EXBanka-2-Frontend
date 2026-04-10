@@ -42,8 +42,15 @@ export function mapGrpcError(code: number, _rawMessage?: string): MappedError {
     case GrpcStatus.FAILED_PRECONDITION:
       message = _rawMessage?.trim() || 'Zahtev ne može biti ispunjen u trenutnom stanju.'
       break
+    case GrpcStatus.INTERNAL:
+    case GrpcStatus.UNKNOWN:
+      // Backend često šalje konkretan razlog (npr. greška trezor računa); ne gubimo ga.
+      message =
+        _rawMessage?.trim() ||
+        'Došlo je do interne greške servera. Molimo pokušajte ponovo.'
+      break
     default:
-      message = 'Došlo je do greške. Molimo pokušajte ponovo.'
+      message = _rawMessage?.trim() || 'Došlo je do greške. Molimo pokušajte ponovo.'
   }
 
   return { message, isUnauthenticated, isUnavailable }

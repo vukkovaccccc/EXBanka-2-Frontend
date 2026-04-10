@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Pencil, User } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { ArrowLeft, BarChart2, Pencil, User } from 'lucide-react'
 import { getClientById } from '@/services/clientService'
+import {
+  getClientTradePermission,
+  setClientTradePermission,
+} from '@/services/clientTradePermissionService'
 import Button from '@/components/common/Button'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import ErrorMessage from '@/components/common/ErrorMessage'
@@ -53,6 +58,22 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<ClientDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [tradePermission, setTradePermission] = useState<boolean | null>(null)
+  const [tradePermissionLoading, setTradePermissionLoading] = useState(false)
+  const [tradeSaving, setTradeSaving] = useState(false)
+
+  const loadTradePermission = useCallback(async (clientId: string) => {
+    setTradePermissionLoading(true)
+    try {
+      const has = await getClientTradePermission(clientId)
+      setTradePermission(has)
+    } catch {
+      setTradePermission(null)
+      toast.error('Nije moguće učitati status dozvole za trgovanje.')
+    } finally {
+      setTradePermissionLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -61,6 +82,7 @@ export default function ClientDetailPage() {
       try {
         const data = await getClientById(id)
         setClient(data)
+        void loadTradePermission(id)
       } catch (err) {
         const e = err as Error & { grpcCode?: number }
         if (e.grpcCode === GrpcStatus.NOT_FOUND) {
@@ -74,7 +96,7 @@ export default function ClientDetailPage() {
     }
 
     void load()
-  }, [id])
+  }, [id, loadTradePermission])
 
   if (loading) {
     return (
@@ -82,6 +104,24 @@ export default function ClientDetailPage() {
         <LoadingSpinner size="lg" />
       </div>
     )
+  }
+
+  const handleTradeToggle = async () => {
+    if (!id || tradePermission === null || tradeSaving) return
+    setTradeSaving(true)
+    try {
+      const next = await setClientTradePermission(id, !tradePermission)
+      setTradePermission(next)
+      toast.success(
+        next
+          ? 'Klijentu je dodeljena dozvola za trgovanje hartijama (TRADE_STOCKS).'
+          : 'Dozvola za trgovanje hartijama je uklonjena.'
+      )
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Greška pri čuvanju dozvole.')
+    } finally {
+      setTradeSaving(false)
+    }
   }
 
   if (error || !client) {
@@ -140,6 +180,39 @@ export default function ClientDetailPage() {
         <FieldRow label="Adresa"         value={client.address} />
         <FieldRow label="Datum rođenja"  value={formatDateOfBirth(client.date_of_birth)} />
         <FieldRow label="Pol"            value={formatGender(client.gender)} />
+      </div>
+
+      {/* TRADE_STOCKS — samo zaposleni (backend) */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-3">
+          <BarChart2 className="h-5 w-5 text-primary-600" />
+          <h2 className="text-base font-semibold text-gray-900">Trgovanje hartijama</h2>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Dozvola <span className="font-mono text-xs">TRADE_STOCKS</span> omogućava klijentu pristup
+          berzi i kupovinu/prodaju. Posle promene klijent se mora ponovo prijaviti da bi novi token
+          sadržao permisije.
+        </p>
+        {tradePermissionLoading ? (
+          <p className="text-sm text-gray-500">Učitavanje...</p>
+        ) : tradePermission === null ? (
+          <p className="text-sm text-amber-700">Status dozvole nije dostupan.</p>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="text-sm font-medium text-gray-800">
+              {tradePermission ? 'Dozvoljeno' : 'Nije dozvoljeno'}
+            </span>
+            <Button
+              type="button"
+              variant={tradePermission ? 'secondary' : 'primary'}
+              size="sm"
+              loading={tradeSaving}
+              onClick={() => void handleTradeToggle()}
+            >
+              {tradePermission ? 'Ukloni dozvolu' : 'Dodeli dozvolu'}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

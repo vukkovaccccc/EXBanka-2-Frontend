@@ -10,7 +10,7 @@ import Button from '@/components/common/Button'
 import Input from '@/components/common/Input'
 import ErrorMessage from '@/components/common/ErrorMessage'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
-import { getClientById, updateClient } from '@/services/clientService'
+import { getClientById, updateClient, getClientTradePermission, setClientTradePermission } from '@/services/clientService'
 import { useBlockNavigation } from '@/hooks/useBlockNavigation'
 import { GrpcStatus } from '@/types'
 
@@ -41,6 +41,9 @@ export default function EditClient() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [hasTradePermission, setHasTradePermission] = useState(false)
+  const [permLoading, setPermLoading] = useState(false)
+  const [permError, setPermError] = useState<string | null>(null)
 
   const {
     register,
@@ -59,7 +62,10 @@ export default function EditClient() {
 
     const load = async () => {
       try {
-        const client = await getClientById(id)
+        const [client, hasPerm] = await Promise.all([
+          getClientById(id),
+          getClientTradePermission(id).catch(() => false),
+        ])
         reset({
           first_name:   client.first_name,
           last_name:    client.last_name,
@@ -67,6 +73,7 @@ export default function EditClient() {
           phone_number: client.phone_number,
           address:      client.address,
         })
+        setHasTradePermission(hasPerm)
       } catch (err) {
         const e = err as Error & { grpcCode?: number }
         if (e.grpcCode === GrpcStatus.NOT_FOUND) {
@@ -81,6 +88,20 @@ export default function EditClient() {
 
     void load()
   }, [id, reset])
+
+  const handleToggleTradePermission = async () => {
+    if (!id) return
+    setPermLoading(true)
+    setPermError(null)
+    try {
+      await setClientTradePermission(id, !hasTradePermission)
+      setHasTradePermission((prev) => !prev)
+    } catch {
+      setPermError('Greška pri promeni dozvole za trgovanje.')
+    } finally {
+      setPermLoading(false)
+    }
+  }
 
   const onSubmit = async (values: FormValues) => {
     if (!id) return
@@ -149,6 +170,35 @@ export default function EditClient() {
           <ErrorMessage message={saveError} />
         </div>
       )}
+
+      {/* ── Dozvola za trgovanje ─────────────────────────────────────── */}
+      <div className="card mb-4">
+        <h2 className="text-lg font-semibold text-gray-800 pb-2 border-b mb-4">Dozvole</h2>
+        {permError && <div className="mb-3"><ErrorMessage message={permError} /></div>}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-gray-800">Dozvola za trgovanje hartijama</p>
+            <p className="text-sm text-gray-500">
+              Klijent {hasTradePermission ? 'ima' : 'nema'} dozvolu da trguje akcijama i fjučersima na berzi.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleTradePermission}
+            disabled={permLoading}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 ${
+              hasTradePermission ? 'bg-primary-600' : 'bg-gray-300'
+            }`}
+            aria-label="Toggle trade permission"
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                hasTradePermission ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="card space-y-4">

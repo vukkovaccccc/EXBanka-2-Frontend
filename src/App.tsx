@@ -1,6 +1,8 @@
 import { createBrowserRouter, RouterProvider, Route, Navigate, createRoutesFromElements, useParams } from 'react-router-dom'
 import PrivateRoute from './router/PrivateRoute'
 import HartijePortalRoute from './router/HartijePortalRoute'
+import PortfolioRoute from './router/PortfolioRoute'
+import PermissionRoute from './router/PermissionRoute'
 import Layout from '@/components/layout/Layout'
 
 // Auth pages (public)
@@ -62,8 +64,6 @@ import ListingDetailsPage from '@/pages/client/listings/ListingDetailsPage'
 import CreateOrderPage from '@/pages/client/listings/CreateOrderPage'
 import MyTradingOrdersPage from '@/pages/client/listings/MyTradingOrdersPage'
 
-// Portfolio (clients + actuaries)
-import MojPortfolioPage from '@/pages/client/portfolio/MojPortfolioPage'
 
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -100,9 +100,9 @@ const router = createBrowserRouter(
             <Route path="employees/new" element={<CreateEmployee />} />
             <Route path="employees/:id/edit" element={<EditEmployee />} />
             <Route path="exchanges" element={<ExchangesPage />} />
-            <Route path="actuaries" element={<ActuaryManagement />} />
-            <Route path="trading/tax" element={<TaxTrackingPage />} />
-            <Route path="trading/orders" element={<SupervisorOrdersPage />} />
+            <Route path="actuaries" element={<PermissionRoute permission="SUPERVISOR"><ActuaryManagement /></PermissionRoute>} />
+            <Route path="trading/tax" element={<PermissionRoute permission="SUPERVISOR"><TaxTrackingPage /></PermissionRoute>} />
+            <Route path="trading/orders" element={<PermissionRoute permission="SUPERVISOR"><SupervisorOrdersPage /></PermissionRoute>} />
           </Route>
 
           {/* Employee home */}
@@ -124,14 +124,14 @@ const router = createBrowserRouter(
             <Route path="accounts/:broj_racuna/cards" element={<AccountCardsPage />} />
             <Route path="credits/requests" element={<ZahteviZaKreditPage />} />
             <Route path="credits/all" element={<SviKreditiPage />} />
-            <Route path="actuaries" element={<ActuaryManagement />} />
+            <Route path="actuaries" element={<PermissionRoute permission="SUPERVISOR"><ActuaryManagement /></PermissionRoute>} />
             <Route path="exchanges" element={<ExchangesPage />} />
-            <Route path="trading/tax" element={<TaxTrackingPage />} />
-            <Route path="trading/orders" element={<SupervisorOrdersPage />} />
+            <Route path="trading/tax" element={<PermissionRoute permission="SUPERVISOR"><TaxTrackingPage /></PermissionRoute>} />
+            <Route path="trading/orders" element={<PermissionRoute permission="SUPERVISOR"><SupervisorOrdersPage /></PermissionRoute>} />
           </Route>
 
-          {/* Portfolio – shared between CLIENT and EMPLOYEE (actuaries) */}
-          <Route path="/portfolio" element={<MojPortfolioPage />} />
+          {/* Portfolio – klijenti i aktuari */}
+          <Route path="/portfolio" element={<PortfolioRoute />} />
 
           {/* Client home */}
           <Route path="/client" element={<PrivateRoute requiredRole="CLIENT" />}>

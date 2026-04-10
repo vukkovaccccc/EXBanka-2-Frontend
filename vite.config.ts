@@ -1,8 +1,16 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-export default defineConfig({
+// user-service HTTP (login, /client/..., permissions): podrazumevano 8080.
+// bank-service HTTP (trading, računi, …): podrazumevano 8082 pri `go run`.
+// Docker (EXBanka-2-Infrastructure): user često 8082, bank 8083 — postavite oba u .env.local.
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const userHttp = env.VITE_USER_HTTP_URL || 'http://127.0.0.1:8080'
+  const bankHttp = env.VITE_BANK_HTTP_URL || 'http://127.0.0.1:8082'
+
+  return {
   plugins: [react()],
   resolve: {
     alias: {
@@ -12,25 +20,26 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // bank-service (account/currency helpers) — /api/bank → 8083/bank
       '/api/bank': {
-        target: 'http://localhost:8083',
+        target: bankHttp,
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api\/bank/, '/bank'),
       },
-      // krediti + all v1 bank-service routes — /api/v1 → 8083/api/v1 (path kept intact)
+      '/api/actuary': {
+        target: bankHttp,
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api/, ''),
+      },
       '/api/v1': {
-        target: 'http://localhost:8083',
+        target: bankHttp,
         changeOrigin: true,
       },
-      // kartice klijenta — /api/cards → 8083/api/cards (path kept intact)
       '/api/cards': {
-        target: 'http://localhost:8083',
+        target: bankHttp,
         changeOrigin: true,
       },
-      // user-service fallback — /api → 8082
       '/api': {
-        target: 'http://localhost:8082',
+        target: userHttp,
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api/, ''),
       },
@@ -70,7 +79,6 @@ export default defineConfig({
         'src/utils/pdfReceipt.ts',
         // Pokretacki fajlovi aplikacije
         'src/App.tsx',
-        'src/router/AppRouter.tsx',
         'src/router/PrivateRoute.tsx',
         // Context provideri
         'src/context/**',
@@ -99,4 +107,5 @@ export default defineConfig({
       ],
     },
   },
+  }
 })

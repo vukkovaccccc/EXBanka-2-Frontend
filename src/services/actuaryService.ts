@@ -74,7 +74,7 @@ function mapAgentListItem(b: BackendAgentListItem): AgentListItem {
 
 /** Returns the ActuaryInfo for the currently authenticated actuary (from JWT). */
 export async function getMyActuaryInfo(): Promise<GetMyActuaryInfoResponse> {
-  const res = await apiGet<{ actuary: BackendActuaryInfo }>('/bank/actuary/me')
+  const res = await apiGet<{ actuary: BackendActuaryInfo }>('/actuary/me')
   return { actuary: mapActuaryInfo(res.actuary) }
 }
 
@@ -83,7 +83,7 @@ export async function getActuaryByEmployeeId(
   request: GetActuaryByEmployeeIDRequest
 ): Promise<GetActuaryByEmployeeIDResponse> {
   const res = await apiGet<{ actuary: BackendActuaryInfo }>(
-    `/bank/actuary/employee/${request.employee_id}`
+    `/actuary/employee/${request.employee_id}`
   )
   return { actuary: mapActuaryInfo(res.actuary) }
 }
@@ -103,7 +103,7 @@ export async function getAgents(
   }
 
   const res = await apiGet<{ agents: BackendAgentListItem[] | null }>(
-    '/bank/actuary/agents',
+    '/actuary/agents',
     params
   )
   return { agents: (res.agents ?? []).map(mapAgentListItem) }
@@ -112,7 +112,7 @@ export async function getAgents(
 /** Supervisor only. Updates the daily spending limit for the specified agent. */
 export async function setAgentLimit(request: SetAgentLimitRequest): Promise<void> {
   await apiPatch<{ limit: string | number }, unknown>(
-    `/bank/actuary/agents/${request.employee_id}/limit`,
+    `/actuary/agents/${request.employee_id}/limit`,
     { limit: request.limit }
   )
 }
@@ -122,7 +122,7 @@ export async function resetAgentUsedLimit(
   request: ResetAgentUsedLimitRequest
 ): Promise<void> {
   await apiPost<Record<string, never>, unknown>(
-    `/bank/actuary/agents/${request.employee_id}/reset-limit`,
+    `/actuary/agents/${request.employee_id}/reset-limit`,
     {}
   )
 }
@@ -132,7 +132,7 @@ export async function setAgentNeedApproval(
   request: SetAgentNeedApprovalRequest
 ): Promise<void> {
   await apiPatch<{ need_approval: boolean }, unknown>(
-    `/bank/actuary/agents/${request.employee_id}/need-approval`,
+    `/actuary/agents/${request.employee_id}/need-approval`,
     { need_approval: request.need_approval }
   )
 }
@@ -140,7 +140,7 @@ export async function setAgentNeedApproval(
 /** Supervisor only. Registers an existing employee as an actuary agent. */
 export async function createActuary(request: CreateActuaryRequest): Promise<void> {
   await apiPost<{ employee_id: string | number; limit: string | number }, unknown>(
-    '/bank/actuary/agents',
+    '/actuary/agents',
     { employee_id: request.employee_id, limit: request.limit }
   )
 }

@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { DictionaryProvider } from '@/context/DictionaryContext'
+import { ActuaryAccessProvider } from '@/context/ActuaryAccessContext'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
@@ -16,6 +17,7 @@ export default function Layout() {
 
   return (
     <DictionaryProvider>
+      <ActuaryAccessProvider>
       <div className="flex h-screen overflow-hidden bg-gray-50">
         <Sidebar
           mobileOpen={sidebarOpen}
@@ -33,6 +35,7 @@ export default function Layout() {
           </main>
         </div>
       </div>
+      </ActuaryAccessProvider>
     </DictionaryProvider>
   )
 }

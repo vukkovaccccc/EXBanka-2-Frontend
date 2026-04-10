@@ -23,6 +23,7 @@ import {
   Receipt,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { useActuaryAccess } from '@/context/ActuaryAccessContext'
 
 interface NavItem {
   label: string
@@ -33,6 +34,8 @@ interface NavItem {
   permission?: string | string[]
   /** Pass end=true to NavLink so sub-routes don't also highlight this item */
   end?: boolean
+  /** Za EMPLOYEE: prikaži samo aktuarima (hartije/portfolio). */
+  employeeNeedsActuary?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -167,18 +170,21 @@ const NAV_ITEMS: NavItem[] = [
     icon: <BarChart2 className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
     end: true,
+    employeeNeedsActuary: true,
   },
   {
     label: 'Moji nalozi',
     to: '/hartije/my-orders',
     icon: <ListOrdered className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
+    employeeNeedsActuary: true,
   },
   {
     label: 'Moj Portfolio',
     to: '/portfolio',
     icon: <Banknote className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
+    employeeNeedsActuary: true,
   },
 
   // ── Client (text-only, no icons per spec) ──────────────────────────────
@@ -190,7 +196,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Krediti',    to: '/client/credits',                            roles: ['CLIENT'] },
   { label: 'Berze',      to: '/client/exchanges',                          roles: ['CLIENT'] },
   { label: 'Hartije od vrednosti', to: '/hartije',          roles: ['CLIENT'], end: true },
-  { label: 'Moji nalozi',          to: '/hartije/my-orders', roles: ['CLIENT'] },
+  { label: 'Moji nalozi',          to: '/hartije/my-orders', roles: ['CLIENT'], permission: 'TRADE_STOCKS' },
   { label: 'Moj Portfolio',        to: '/portfolio',          roles: ['CLIENT'] },
 ]
 
@@ -208,6 +214,7 @@ interface SidebarProps {
 
 export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const { user, clearAuth, hasPermission } = useAuthStore()
+  const { loading: actuaryLoading, canAccessTradingPortals } = useActuaryAccess()
   const location = useLocation()
 
   const isClient = user?.userType === 'CLIENT'
@@ -220,6 +227,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     if (item.permission) {
       const perms = Array.isArray(item.permission) ? item.permission : [item.permission]
       if (!perms.some((p) => hasPermission(p))) return false
+    }
+    if (
+      item.employeeNeedsActuary &&
+      user.userType === 'EMPLOYEE'
+    ) {
+      if (actuaryLoading) return false
+      if (!canAccessTradingPortals) return false
     }
     return true
   })

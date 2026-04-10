@@ -7,6 +7,8 @@ interface ListingsState {
   total: number
   selectedListing: ListingDetail | null
   priceHistory: ListingHistoryItem[]
+  /** Greška samo za /history (ne briše detalj stranice) */
+  historyError: string | null
   filters: ListingsFilter
   loading: boolean
   loadingDetail: boolean
@@ -25,6 +27,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
   total: 0,
   selectedListing: null,
   priceHistory: [],
+  historyError: null,
   filters: {
     listingType: '',
     sortBy: 'ticker',
@@ -63,12 +66,15 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
   },
 
   fetchListingHistory: async (id: string, fromDate?: string, toDate?: string) => {
-    set({ loadingHistory: true })
+    set({ loadingHistory: true, historyError: null })
     try {
       const history = await getListingHistory(id, fromDate, toDate)
-      set({ priceHistory: history })
-    } catch {
-      set({ priceHistory: [] })
+      set({ priceHistory: history, historyError: null })
+    } catch (err: unknown) {
+      set({
+        priceHistory: [],
+        historyError: err instanceof Error ? err.message : 'Greška pri učitavanju istorije cena',
+      })
     } finally {
       set({ loadingHistory: false })
     }
@@ -82,5 +88,5 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
     }))
   },
 
-  clearSelected: () => set({ selectedListing: null, priceHistory: [] }),
+  clearSelected: () => set({ selectedListing: null, priceHistory: [], historyError: null }),
 }))

@@ -74,8 +74,8 @@ function SetLimitDialog({ agent, onClose, onSaved }: SetLimitDialogProps) {
     e.preventDefault()
     if (!agent) return
     const parsed = parseFloat(value)
-    if (isNaN(parsed) || parsed < 0) {
-      toast.error('Unesite validan iznos limita (≥ 0).')
+    if (isNaN(parsed) || parsed <= 0) {
+      toast.error('Limit mora biti veći od nule.')
       return
     }
     setSaving(true)

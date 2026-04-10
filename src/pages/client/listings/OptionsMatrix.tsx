@@ -125,6 +125,17 @@ export default function OptionsMatrix({ listing }: Props) {
         </p>
       ) : (
         <div className="overflow-x-auto">
+          <p className="text-xs text-gray-500 mb-3 flex flex-wrap items-center gap-4">
+            <span>
+              <span className="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 align-middle mr-1" />
+              ITM (in-the-money)
+            </span>
+            <span>
+              <span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-200 align-middle mr-1" />
+              OTM (out-of-the-money)
+            </span>
+            <span className="text-gray-400">| CALL ITM: strike &lt; spot · PUT ITM: strike &gt; spot</span>
+          </p>
           <table className="w-full text-sm border-collapse min-w-[720px]">
             <thead>
               <tr className="border-b border-gray-200">
@@ -168,7 +179,7 @@ export default function OptionsMatrix({ listing }: Props) {
                 const putITM = row.strike > spot
 
                 const itmClass = 'bg-green-50 text-green-900'
-                const otmClass = 'bg-white text-gray-800'
+                const otmClass = 'bg-red-50 text-red-900'
 
                 const callCellClass = callITM ? itmClass : otmClass
                 const putCellClass = putITM ? itmClass : otmClass

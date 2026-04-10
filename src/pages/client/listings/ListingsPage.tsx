@@ -7,6 +7,7 @@ import type { ListingType } from '@/types'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import ErrorMessage from '@/components/common/ErrorMessage'
 import { hartijeDetailPath, hartijeKupovinaPath } from '@/router/helpers'
+import { useActuaryAccess } from '@/context/ActuaryAccessContext'
 
 const ALL_TYPE_TABS: { label: string; value: ListingType | '' }[] = [
   { label: 'Sve', value: '' },
@@ -30,7 +31,12 @@ const SORT_OPTIONS = [
 export default function ListingsPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
+  const { canAccessTradingPortals } = useActuaryAccess()
   const isClient = user?.userType === 'CLIENT'
+  const showBuyButton =
+    user?.userType === 'ADMIN' ||
+    (user?.userType === 'EMPLOYEE' && canAccessTradingPortals) ||
+    (user?.userType === 'CLIENT' && canAccessTradingPortals)
 
   const {
     listings,
@@ -60,6 +66,14 @@ export default function ListingsPage() {
   useEffect(() => {
     fetchListings()
   }, [filters])
+
+  // Automatsko osvežavanje svakih 60 sekundi (Scenario 17)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchListings()
+    }, 60_000)
+    return () => clearInterval(timer)
+  }, [])
 
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const [sortBy, sortOrder] = e.target.value.split('|')
@@ -314,14 +328,21 @@ export default function ListingsPage() {
                           className="px-4 py-3 text-center"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <button
-                            type="button"
-                            onClick={() => navigate(hartijeKupovinaPath(listing.id))}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700 transition-colors"
-                          >
-                            <ShoppingCart className="w-3.5 h-3.5" />
-                            Kupi
-                          </button>
+                          {showBuyButton ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                navigate(hartijeKupovinaPath(listing.id))
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700 transition-colors"
+                            >
+                              <ShoppingCart className="w-3.5 h-3.5" />
+                              Kupi
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
                         </td>
                       </tr>
                     )

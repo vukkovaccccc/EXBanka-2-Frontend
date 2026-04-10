@@ -1,7 +1,8 @@
 /**
  * REST API client for the EXBanka backend (gRPC-Gateway HTTP/JSON API).
  *
- * All requests go through the Vite proxy at /api → http://localhost:8082.
+ * Dev: `/api/bank/*` → bank-service (VITE_BANK_HTTP_URL, podrazumevano :8082),
+ * ostatak `/api` → user-service (VITE_USER_HTTP_URL, podrazumevano :8080). Vite vite.config.ts.
  * gRPC-Gateway returns camelCase JSON; int64 fields come as strings.
  */
 
@@ -75,6 +76,8 @@ function mapHttpToGrpcCode(httpStatus: number): number {
     case 403: return GrpcStatus.PERMISSION_DENIED
     case 404: return GrpcStatus.NOT_FOUND
     case 409: return GrpcStatus.ALREADY_EXISTS
+    // 502: nginx/Vite proxy kad upstream (npr. bank-service) nije dostupan ili prekine vezu
+    case 502: return GrpcStatus.UNAVAILABLE
     case 503: return GrpcStatus.UNAVAILABLE
     default: return GrpcStatus.UNKNOWN
   }

@@ -1,6 +1,17 @@
 import { apiGet, apiPatch, apiPost } from './grpcClient'
 import type { Client, ClientDetail, CreateClientRequest, ListClientsParams, ListClientsResponse, UpdateClientRequest } from '@/types'
 
+// ── Trade permission helpers ───────────────────────────────────────────────────
+
+export async function getClientTradePermission(id: string): Promise<boolean> {
+  const res = await apiGet<{ has_trade_permission: boolean }>(`/client/${id}/trade-permission`)
+  return res.has_trade_permission
+}
+
+export async function setClientTradePermission(id: string, grant: boolean): Promise<void> {
+  await apiPatch<{ grant: boolean }, unknown>(`/client/${id}/trade-permission`, { grant })
+}
+
 // ── Backend shapes (gRPC-Gateway returns camelCase) ───────────────────────────
 
 interface BackendClient {
