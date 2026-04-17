@@ -143,6 +143,15 @@ function ConfirmCancelDialog({
               <span className="text-gray-500">Količina</span>
               <span className="font-medium">{order.quantity}</span>
             </div>
+            {(() => {
+              const filled = order.quantity - order.remainingPortions
+              return filled > 0 ? (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Već kupljeno</span>
+                  <span className="font-medium text-amber-600">{filled}/{order.quantity} portija</span>
+                </div>
+              ) : null
+            })()}
             <div className="flex justify-between">
               <span className="text-gray-500">Status</span>
               <StatusBadge status={order.status} />
@@ -186,6 +195,7 @@ export default function SupervisorOrdersPage() {
   // Cancel confirmation
   const [cancelTarget, setCancelTarget] = useState<TradingOrder | null>(null)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const cancelInProgressRef = useRef(false)
 
   // Track which user IDs we've already fetched to avoid redundant calls
   const fetchedUserIds = useRef<Set<string>>(new Set())
@@ -270,17 +280,23 @@ export default function SupervisorOrdersPage() {
   }
 
   const handleCancelConfirm = async () => {
-    if (!cancelTarget) return
+    if (!cancelTarget || cancelInProgressRef.current) return
+    cancelInProgressRef.current = true
     setCancelLoading(true)
     try {
-      await cancelTradingOrder(cancelTarget.id)
-      toast.success(`Nalog #${cancelTarget.id} je otkazan.`)
+      const result = await cancelTradingOrder(cancelTarget.id)
+      const filled = result.quantity - result.remainingPortions
+      const toastMsg = filled > 0
+        ? `Nalog #${cancelTarget.id} je otkazan. Kupljeno: ${filled}/${result.quantity} portija.`
+        : `Nalog #${cancelTarget.id} je otkazan.`
+      toast.success(toastMsg)
       setCancelTarget(null)
       await fetchOrders()
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Greška pri otkazivanju.')
     } finally {
       setCancelLoading(false)
+      cancelInProgressRef.current = false
     }
   }
 

@@ -321,10 +321,21 @@ export default function MojPortfolioPage() {
                       const details = parseOptionDetails(h.detailsJson)
                       const canExercise = isActuary && h.listingType === 'OPTION' && isOptionInTheMoney(h)
                       const maxPublic = h.listingType === 'STOCK' ? h.quantity - h.publicShares : 0
+                      const isExpired = (h.listingType === 'OPTION' || h.listingType === 'FUTURE') &&
+                        details.settlement_date != null &&
+                        new Date() > new Date(details.settlement_date)
                       return (
                         <tr key={h.listingId} className="hover:bg-gray-50 transition-colors">
                           <Td><ListingTypeBadge type={h.listingType} /></Td>
-                          <Td><span className="font-semibold text-gray-900">{h.ticker}</span><div className="text-xs text-gray-400">{h.name}</div></Td>
+                          <Td>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-gray-900">{h.ticker}</span>
+                              {isExpired && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-600 uppercase">Isteklo</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-400">{h.name}</div>
+                          </Td>
                           <Td right mono>{h.quantity.toLocaleString()}</Td>
                           <Td right mono>{formatUSD(h.currentPrice)}</Td>
                           <Td right mono>{formatUSD(h.avgBuyPrice)}</Td>
@@ -336,14 +347,18 @@ export default function MojPortfolioPage() {
                           <Td><span className="text-xs text-gray-500">{new Date(h.lastModified).toLocaleDateString('sr-RS')}</span></Td>
                           <Td>
                             <div className="flex flex-wrap gap-1.5">
-                              {/* Sell button */}
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => navigate(`${hartijeKupovinaPath(h.listingId)}?direction=SELL${h.accountId ? `&accountId=${h.accountId}` : ''}`)}
-                              >
-                                Prodaj
-                              </Button>
+                              {/* Sell button — hidden for forex (no portfolio tracking) */}
+                              {h.listingType !== 'FOREX' && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={isExpired}
+                                  title={isExpired ? 'Hartija je istekla — ne može se prodati' : undefined}
+                                  onClick={() => navigate(`${hartijeKupovinaPath(h.listingId)}?direction=SELL${h.accountId ? `&accountId=${h.accountId}` : ''}`)}
+                                >
+                                  Prodaj
+                                </Button>
+                              )}
 
                               {/* Publish stocks for OTC */}
                               {h.listingType === 'STOCK' && maxPublic > 0 && (

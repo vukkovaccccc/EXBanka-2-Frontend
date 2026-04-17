@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { RefreshCw, Ban, ExternalLink } from 'lucide-react'
+import { RefreshCw, Ban, ExternalLink, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { listMyTradingOrders, cancelTradingOrder } from '@/services/tradingService'
 import type { TradingOrder, TradingOrderStatus } from '@/types'
@@ -140,6 +140,15 @@ function ConfirmCancelDialog({ order, loading, onConfirm, onClose }: ConfirmCanc
               <span className="text-gray-500">Količina</span>
               <span className="font-medium">{order.quantity}</span>
             </div>
+            {(() => {
+              const filled = order.quantity - order.remainingPortions
+              return filled > 0 ? (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Već kupljeno</span>
+                  <span className="font-medium text-amber-600">{filled}/{order.quantity} portija</span>
+                </div>
+              ) : null
+            })()}
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Status</span>
               <StatusBadge status={order.status} />
@@ -160,11 +169,26 @@ function ConfirmCancelDialog({ order, loading, onConfirm, onClose }: ConfirmCanc
   )
 }
 
+// ─── Actuary pending badge ─────────────────────────────────────────────────────
+
+function ActuaryPendingNote() {
+  return (
+    <span
+      title="Nalog čeka odobrenje od strane supervizora pre nego što bude prosleđen na izvršenje."
+      className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 cursor-default"
+    >
+      <Clock className="h-3 w-3 flex-shrink-0" />
+      Čeka odobrenje
+    </span>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function MyTradingOrdersPage() {
   const user = useAuthStore((s) => s.user)
   const { canAccessTradingPortals } = useActuaryAccess()
+  const isActuary = user?.userType === 'EMPLOYEE'
   const [orders, setOrders] = useState<TradingOrder[]>([])
   const [statusFilter, setStatusFilter] = useState<TradingOrderStatus | ''>('')
   const [loading, setLoading] = useState(false)
@@ -172,6 +196,7 @@ export default function MyTradingOrdersPage() {
 
   const [cancelTarget, setCancelTarget] = useState<TradingOrder | null>(null)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const cancelInProgressRef = useRef(false)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -196,17 +221,23 @@ export default function MyTradingOrdersPage() {
   }, [fetchOrders, user?.userType, canAccessTradingPortals])
 
   const handleCancelConfirm = async () => {
-    if (!cancelTarget) return
+    if (!cancelTarget || cancelInProgressRef.current) return
+    cancelInProgressRef.current = true
     setCancelLoading(true)
     try {
-      await cancelTradingOrder(cancelTarget.id)
-      toast.success(`Nalog #${cancelTarget.id} je uspešno otkazan.`)
+      const result = await cancelTradingOrder(cancelTarget.id)
+      const filled = result.quantity - result.remainingPortions
+      const toastMsg = filled > 0
+        ? `Nalog #${cancelTarget.id} je otkazan. Kupljeno: ${filled}/${result.quantity} portija.`
+        : `Nalog #${cancelTarget.id} je uspešno otkazan.`
+      toast.success(toastMsg)
       setCancelTarget(null)
       await fetchOrders()
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Greška pri otkazivanju naloga.')
     } finally {
       setCancelLoading(false)
+      cancelInProgressRef.current = false
     }
   }
 
@@ -346,7 +377,12 @@ export default function MyTradingOrdersPage() {
                           })()}
                         </Td>
                         <Td>
-                          <StatusBadge status={order.status} />
+                          <div className="flex flex-col gap-1">
+                            <StatusBadge status={order.status} />
+                            {isActuary && order.status === 'PENDING' && (
+                              <ActuaryPendingNote />
+                            )}
+                          </div>
                         </Td>
                         <Td>
                           {new Date(order.createdAt).toLocaleString('sr-RS', {

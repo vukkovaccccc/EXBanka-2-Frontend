@@ -13,6 +13,7 @@ export interface HoldingItem {
   name: string
   listingType: 'STOCK' | 'FOREX' | 'FUTURE' | 'OPTION'
   quantity: number
+  availableQuantity: number
   currentPrice: number
   avgBuyPrice: number
   profit: number

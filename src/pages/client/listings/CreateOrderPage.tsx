@@ -176,9 +176,9 @@ export default function CreateOrderPage() {
     return () => { cancelled = true }
   }, [selectedListing])
 
-  // ── Fetch owned quantity when SELL direction is chosen ──────────────────────
+  // ── Fetch owned quantity when SELL direction is chosen (skip for forex) ───────
   useEffect(() => {
-    if (side !== 'SELL' || !id) {
+    if (side !== 'SELL' || !id || selectedListing?.base?.listingType === 'FOREX') {
       setOwnedQty(null)
       return
     }
@@ -187,11 +187,11 @@ export default function CreateOrderPage() {
       .then((portfolio) => {
         if (cancelled) return
         const holding = portfolio.holdings.find((h) => h.listingId === id)
-        setOwnedQty(holding ? holding.quantity : 0)
+        setOwnedQty(holding ? holding.availableQuantity : 0)
       })
       .catch(() => { if (!cancelled) setOwnedQty(null) })
     return () => { cancelled = true }
-  }, [side, id])
+  }, [side, id, selectedListing])
 
   // ── Live calculation (debounced 600ms) ──────────────────────────────────────
   const runCalculate = useCallback(async () => {
@@ -282,7 +282,45 @@ export default function CreateOrderPage() {
   }
 
   const { base } = selectedListing
+  const isForex = base.listingType === 'FOREX'
+  const isOption = base.listingType === 'OPTION'
   const isPositive = base.changePercent >= 0
+
+  // Parse forex currency pair from detailsJson
+  let forexBase = ''
+  let forexQuote = ''
+  if (isForex && selectedListing.detailsJson) {
+    try {
+      const d = JSON.parse(selectedListing.detailsJson)
+      forexBase = d.base_currency ?? ''
+      forexQuote = d.quote_currency ?? ''
+    } catch {}
+  }
+
+  // Parse option underlying from OCC ticker: {UNDERLYING}{YYMMDD}{C|P}{STRIKE8}
+  const optionUnderlying = isOption && base.ticker.length > 15
+    ? base.ticker.slice(0, base.ticker.length - 15)
+    : ''
+  const optionContractSize = selectedListing.contractSize ?? 100
+
+  if (isClient && isForex) {
+    return (
+      <div className="max-w-lg mx-auto py-12 px-4">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center space-y-3">
+          <p className="text-lg font-semibold text-gray-900">Forex nije dostupan klijentima</p>
+          <p className="text-sm text-gray-600">
+            Forex parovi su dostupni samo aktuarima banke.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            <button type="button" onClick={() => navigate(hartijeListPath())}
+              className="px-4 py-2 rounded-lg bg-primary-600 text-sm font-medium text-white hover:bg-primary-700">
+              Nazad na listu
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // ── Submit handler — validates and opens confirm dialog ─────────────────────
   const handleSubmit = (e: React.FormEvent) => {
@@ -455,6 +493,20 @@ export default function CreateOrderPage() {
               <option key={ot} value={ot}>{ORDER_TYPE_LABELS[ot]}</option>
             ))}
           </select>
+          {/* Activation condition help text */}
+          <div className="rounded-lg bg-blue-50 border border-blue-100 text-blue-800 px-3 py-2 text-xs flex gap-2 mt-2">
+            <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-500" />
+            <span>
+              {orderType === 'MARKET' && side === 'BUY' && 'Kupovina po trenutnom ask kursu. Izvršava se odmah čim engine preuzme nalog.'}
+              {orderType === 'MARKET' && side === 'SELL' && 'Prodaja po trenutnom bid kursu. Izvršava se odmah čim engine preuzme nalog.'}
+              {orderType === 'LIMIT' && side === 'BUY' && 'Izvršava se kada ask kurs padne na ili ispod zadate limit cene.'}
+              {orderType === 'LIMIT' && side === 'SELL' && 'Izvršava se kada bid kurs poraste na ili iznad zadate limit cene.'}
+              {orderType === 'STOP' && side === 'BUY' && 'Aktivira se kada tržišna cena dostigne stop cenu; zatim se kupuje po tržišnom kursu.'}
+              {orderType === 'STOP' && side === 'SELL' && 'Aktivira se kada tržišna cena padne na stop cenu; zatim se prodaje po tržišnom kursu.'}
+              {orderType === 'STOP_LIMIT' && side === 'BUY' && 'Aktivira se na stop ceni, a zatim čeka da ask bude ≤ limit ceni pre kupovine.'}
+              {orderType === 'STOP_LIMIT' && side === 'SELL' && 'Aktivira se na stop ceni, a zatim čeka da bid bude ≥ limit ceni pre prodaje.'}
+            </span>
+          </div>
         </div>
 
         {/* Quantity */}
@@ -463,15 +515,25 @@ export default function CreateOrderPage() {
             Količina {selectedListing.contractSize > 1 && `(veličina kontr.: ${selectedListing.contractSize})`}
           </label>
           <input type="number" min="1" step="1" required
+            max={side === 'SELL' && ownedQty !== null ? ownedQty : undefined}
             value={quantity} onChange={(e) => setQuantity(e.target.value)}
             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
-          {/* Owned quantity hint for SELL orders */}
+          {/* Available quantity hint for SELL orders */}
           {side === 'SELL' && ownedQty !== null && (
             <p className={`text-xs mt-1.5 ${ownedQty === 0 ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
               {ownedQty === 0
                 ? 'Ne posedujete ovu hartiju — prodaja nije moguća.'
-                : `Posedujete: ${ownedQty} komad${ownedQty === 1 ? '' : 'a'}`}
+                : isOption
+                  ? `Raspoloživo za prodaju: ${ownedQty} ugovor${ownedQty === 1 ? '' : 'a'}`
+                  : `Raspoloživo za prodaju: ${ownedQty} komad${ownedQty === 1 ? '' : 'a'}`}
             </p>
+          )}
+          {/* Option BUY info: 1 ugovor = N akcija UNDERLYING */}
+          {isOption && side === 'BUY' && (
+            <div className="mt-2 rounded-lg bg-purple-50 border border-purple-200 text-purple-800 px-3 py-2 text-xs flex gap-2">
+              <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-purple-500" />
+              <span>1 ugovor = {optionContractSize} akcija{optionUnderlying ? ` ${optionUnderlying}` : ''}</span>
+            </div>
           )}
         </div>
 
@@ -510,12 +572,14 @@ export default function CreateOrderPage() {
               All or None (AON) — izvršiti samo ako je moguće u celosti
             </span>
           </label>
-          {hasMarginPermission && (
+          {(isActuaryTrader || isClient) && !isForex && side === 'BUY' && (
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <input type="checkbox" checked={margin} onChange={(e) => setMargin(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
               <span className="text-sm text-gray-700">
-                Margin — trgovanje kreditom
+                {isClient
+                  ? 'Margin — trgovanje kreditom (zahteva odobren kredit)'
+                  : 'Margin — trgovanje kreditom (zahteva ulogu aktuara)'}
               </span>
             </label>
           )}
@@ -525,7 +589,9 @@ export default function CreateOrderPage() {
         <div className={`rounded-lg border p-4 space-y-1.5 transition-opacity ${calcLoading ? 'opacity-60' : 'opacity-100'} ${calc ? 'bg-gray-50 border-gray-100' : 'bg-gray-50 border-dashed border-gray-200'}`}>
           <div className="flex items-center gap-1.5 mb-2">
             <Info className="h-3.5 w-3.5 text-gray-400" />
-            <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Procena cene</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
+              {isForex ? 'Procena razmene' : 'Procena cene'}
+            </p>
             {calcLoading && <LoadingSpinner size="sm" />}
           </div>
           {calcError ? (
@@ -534,28 +600,72 @@ export default function CreateOrderPage() {
               {calcError}
             </div>
           ) : calc ? (
-            <>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Cena / jed.:</span>
-                <span className="font-mono font-medium">{fmt(calc.pricePerUnit)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Ukupno (aproks.):</span>
-                <span className="font-mono font-bold text-gray-900">{fmt(calc.approximatePrice)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Provizija:</span>
-                <span className="font-mono">{fmt(calc.commission)}</span>
-              </div>
-              {calc.initialMarginCost && (
+            isForex ? (() => {
+              const qty = parseFloat(quantity) || 0
+              const nominalBase = selectedListing.contractSize * qty
+              const rate = parseFloat(String(calc.pricePerUnit)) || 0
+              const nominalQuote = nominalBase * rate
+              return (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Kurs ({forexBase}/{forexQuote}):</span>
+                    <span className="font-mono font-medium">{rate.toFixed(6)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Nominalna vrednost:</span>
+                    <span className="font-mono">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
+                  </div>
+                  {side === 'BUY' ? (
+                    <>
+                      <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Skida se ({forexQuote}):</span>
+                        <span className="font-mono font-bold text-red-600">{nominalQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexQuote}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Uplaćuje se ({forexBase}):</span>
+                        <span className="font-mono font-bold text-green-600">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Skida se ({forexBase}):</span>
+                        <span className="font-mono font-bold text-red-600">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500 font-medium">Uplaćuje se ({forexQuote}):</span>
+                        <span className="font-mono font-bold text-green-600">{nominalQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexQuote}</span>
+                      </div>
+                    </>
+                  )}
+                </>
+              )
+            })() : (
+              <>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Initial Margin Cost:</span>
-                  <span className="font-mono text-amber-700">{fmt(calc.initialMarginCost)}</span>
+                  <span className="text-gray-500">Cena / jed.:</span>
+                  <span className="font-mono font-medium">{fmt(calc.pricePerUnit)}</span>
                 </div>
-              )}
-            </>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Ukupno (aproks.):</span>
+                  <span className="font-mono font-bold text-gray-900">{fmt(calc.approximatePrice)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Provizija:</span>
+                  <span className="font-mono">{fmt(calc.commission)}</span>
+                </div>
+                {calc.initialMarginCost && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Initial Margin Cost:</span>
+                    <span className="font-mono text-amber-700">{fmt(calc.initialMarginCost)}</span>
+                  </div>
+                )}
+              </>
+            )
           ) : (
-            <p className="text-xs text-gray-400">Popunite polja da vidite procenu.</p>
+            <p className="text-xs text-gray-400">
+              {isForex ? 'Popunite polja da vidite procenu razmene.' : 'Popunite polja da vidite procenu.'}
+            </p>
           )}
         </div>
 
@@ -588,7 +698,10 @@ export default function CreateOrderPage() {
         )}
         {isActuaryTrader && !isClient && (
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
-            <span className="font-medium text-slate-800">Naplata:</span> bankovni trezor (USD) — automatski odabir računa banke pri izvršenju naloga.
+            <span className="font-medium text-slate-800">{isForex ? 'Razmena:' : 'Naplata:'}</span>{' '}
+            {isForex
+              ? `trezor ${forexBase} / trezor ${forexQuote} — automatski odabir trezor računa banke pri izvršenju.`
+              : 'bankovni trezor (USD) — automatski odabir računa banke pri izvršenju naloga.'}
           </div>
         )}
 
@@ -604,7 +717,7 @@ export default function CreateOrderPage() {
             submitting ||
             !parseFloat(quantity) || parseFloat(quantity) <= 0 ||
             (isClient && (loadingAccounts || accounts.length === 0 || !accountId)) ||
-            (side === 'SELL' && ownedQty !== null && ownedQty === 0)
+            (!isForex && side === 'SELL' && ownedQty !== null && ownedQty === 0)
           }
           className={[
             'w-full py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50',
@@ -658,20 +771,58 @@ export default function CreateOrderPage() {
                 </span>
               </div>
               {calc && (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Cena / jed.</span>
-                    <span className="font-mono">${parseFloat(String(calc.pricePerUnit)).toFixed(4)}</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-2 flex justify-between">
-                    <span className="text-gray-500">Ukupno (aproks.)</span>
-                    <span className="font-mono font-bold text-gray-900">${parseFloat(String(calc.approximatePrice)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Provizija</span>
-                    <span className="font-mono text-amber-700">${parseFloat(String(calc.commission)).toFixed(4)}</span>
-                  </div>
-                </>
+                isForex ? (() => {
+                  const qty = parseFloat(quantity) || 0
+                  const nominalBase = selectedListing.contractSize * qty
+                  const rate = parseFloat(String(calc.pricePerUnit)) || 0
+                  const nominalQuote = nominalBase * rate
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Kurs ({forexBase}/{forexQuote})</span>
+                        <span className="font-mono">{rate.toFixed(6)}</span>
+                      </div>
+                      {side === 'BUY' ? (
+                        <>
+                          <div className="border-t border-gray-200 pt-2 flex justify-between">
+                            <span className="text-gray-500">Skida se ({forexQuote})</span>
+                            <span className="font-mono font-bold text-red-600">{nominalQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexQuote}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Uplaćuje se ({forexBase})</span>
+                            <span className="font-mono font-bold text-green-600">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="border-t border-gray-200 pt-2 flex justify-between">
+                            <span className="text-gray-500">Skida se ({forexBase})</span>
+                            <span className="font-mono font-bold text-red-600">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Uplaćuje se ({forexQuote})</span>
+                            <span className="font-mono font-bold text-green-600">{nominalQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexQuote}</span>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )
+                })() : (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Cena / jed.</span>
+                      <span className="font-mono">${parseFloat(String(calc.pricePerUnit)).toFixed(4)}</span>
+                    </div>
+                    <div className="border-t border-gray-200 pt-2 flex justify-between">
+                      <span className="text-gray-500">Ukupno (aproks.)</span>
+                      <span className="font-mono font-bold text-gray-900">${parseFloat(String(calc.approximatePrice)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Provizija</span>
+                      <span className="font-mono text-amber-700">${parseFloat(String(calc.commission)).toFixed(4)}</span>
+                    </div>
+                  </>
+                )
               )}
             </div>
 
@@ -693,7 +844,10 @@ export default function CreateOrderPage() {
             })()}
             {isActuaryTrader && !isClient && (
               <div className="rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-900">
-                Naplata ide sa <strong>bankovnog trezor računa</strong> (USD), kako definiše backend.
+                {isForex
+                  ? <>Zamena ide sa <strong>trezor {forexBase}</strong> / <strong>trezor {forexQuote}</strong> računa banke.</>
+                  : <>Naplata ide sa <strong>bankovnog trezor računa</strong> (USD), kako definiše backend.</>
+                }
               </div>
             )}
 
