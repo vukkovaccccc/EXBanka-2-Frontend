@@ -9,6 +9,7 @@ import Button from '@/components/common/Button'
 import { hartijeListPath, hartijeDetailPath } from '@/router/helpers'
 import { getClientAccounts } from '@/services/bankaService'
 import { calculateOrder, createTradingOrder } from '@/services/tradingService'
+import { getClientCredits } from '@/services/kreditService'
 import { getAllExchanges } from '@/services/exchangeService'
 import { getMyPortfolio } from '@/services/portfolioService'
 import { useActuaryAccess } from '@/context/ActuaryAccessContext'
@@ -69,6 +70,7 @@ export default function CreateOrderPage() {
   const [stopPrice,   setStopPrice]   = useState('')
   const [allOrNone,   setAllOrNone]   = useState(false)
   const [margin,      setMargin]      = useState(false)
+  const [hasMarginPermission, setHasMarginPermission] = useState(false)
 
   // Account (client only)
   const [accounts,        setAccounts]        = useState<AccountListItem[]>([])
@@ -136,6 +138,28 @@ export default function CreateOrderPage() {
       cancelled = true
     }
   }, [isClient, isActuaryTrader, preselectedAccountId])
+
+  // ── Margin permission: aktuari uvek mogu, klijenti samo ako imaju odobren kredit ──
+  useEffect(() => {
+    if (isActuaryTrader) {
+      setHasMarginPermission(true)
+      return
+    }
+    if (!isClient) {
+      setHasMarginPermission(false)
+      return
+    }
+    let cancelled = false
+    getClientCredits()
+      .then((credits) => {
+        if (cancelled) return
+        const hasApproved = credits.some((c) => c.status === 'ODOBREN')
+        setHasMarginPermission(hasApproved)
+        if (!hasApproved) setMargin(false)
+      })
+      .catch(() => { if (!cancelled) setHasMarginPermission(false) })
+    return () => { cancelled = true }
+  }, [isClient, isActuaryTrader])
 
   // ── Fetch exchange market status when listing loads ─────────────────────────
   useEffect(() => {
