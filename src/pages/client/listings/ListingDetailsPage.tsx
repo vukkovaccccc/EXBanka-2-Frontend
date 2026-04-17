@@ -14,16 +14,10 @@ import { useListingsStore } from '@/store/useListingsStore'
 import { useAuthStore } from '@/store/authStore'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import ErrorMessage from '@/components/common/ErrorMessage'
-import OptionsMatrix from './OptionsMatrix'
 import OptionsExpiryApproach2 from './OptionsExpiryApproach2'
 import { hartijeListPath, hartijeKupovinaPath } from '@/router/helpers'
 import { useActuaryAccess } from '@/context/ActuaryAccessContext'
 
-function extractOptionUnderlying(ticker: string): string {
-  let end = 0
-  while (end < ticker.length && /[A-Za-z]/.test(ticker[end])) end++
-  return ticker.slice(0, end)
-}
 
 const PERIOD_BUTTONS: { label: string; days: number }[] = [
   { label: '1D', days: 1 },
@@ -402,17 +396,12 @@ export default function ListingDetailsPage() {
         })()}
       </div>
 
-      {/* Pristup 2: opcije po datumu isteka */}
-      {base.listingType === 'OPTION' && (
-        <OptionsExpiryApproach2
-          underlying={extractOptionUnderlying(base.ticker)}
-          currentListingId={base.id}
-        />
-      )}
-
-      {/* Matrica opcija — aktuari/admin, samo akcije (Pristup 1) */}
+      {/* Pristup 2: opcijski lanac po datumu isteka — samo za akcije, vidljivo aktuarima/adminu */}
       {base.listingType === 'STOCK' && showOptionsMatrix && (
-        <OptionsMatrix listing={selectedListing} />
+        <OptionsExpiryApproach2
+          underlying={base.ticker}
+          stockPrice={base.price}
+        />
       )}
     </div>
   )

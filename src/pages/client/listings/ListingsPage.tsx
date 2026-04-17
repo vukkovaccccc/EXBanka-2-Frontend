@@ -17,8 +17,24 @@ const ALL_TYPE_TABS: { label: string; value: ListingType | '' }[] = [
   { label: 'Opcije', value: 'OPTION' },
 ]
 
-/** Klijenti mogu da trguju samo akcijama i futures-ima (per specifikacija). */
-const CLIENT_ALLOWED_TYPES = new Set<ListingType | ''>(['', 'STOCK', 'FUTURE'])
+/** Klijenti ne vide Forex — sve ostale hartije (STOCK, FUTURE, OPTION) su dostupne. */
+const CLIENT_ALLOWED_TYPES = new Set<ListingType | ''>(['', 'STOCK', 'FUTURE', 'OPTION'])
+
+/**
+ * Za OPTION listing, OCC ticker kodira datum isteka: {UNDERLYING}{YYMMDD}{C|P}{STRIKE8}.
+ * Vraća true ako je opcija istekla (datum u prošlosti).
+ */
+function isOptionExpiredByTicker(ticker: string): boolean {
+  if (ticker.length < 15) return false
+  const fixed = ticker.slice(-15)
+  const yy = parseInt(fixed.slice(0, 2), 10)
+  const mm = parseInt(fixed.slice(2, 4), 10)
+  const dd = parseInt(fixed.slice(4, 6), 10)
+  if (isNaN(yy) || isNaN(mm) || isNaN(dd)) return false
+  const expiry = new Date(2000 + yy, mm - 1, dd)
+  expiry.setHours(23, 59, 59, 999)
+  return expiry < new Date()
+}
 
 const SORT_OPTIONS = [
   { label: 'Ticker (A-Z)', value: 'ticker', order: 'ASC' },
@@ -49,6 +65,7 @@ export default function ListingsPage() {
   } = useListingsStore()
 
   const typeTabs = useMemo(() => {
+    // Klijenti ne vide FOREX; sve ostalo (STOCK, FUTURE, OPTION) dostupno svima.
     if (isClient) {
       return ALL_TYPE_TABS.filter((t) => CLIENT_ALLOWED_TYPES.has(t.value))
     }
@@ -104,7 +121,20 @@ export default function ListingsPage() {
           {typeTabs.map(({ label, value }) => (
             <button
               key={value}
-              onClick={() => setFilters({ listingType: value })}
+              onClick={() =>
+                setFilters({
+                  listingType: value,
+                  // Resetuj sve range/date filtere pri promeni tipa —
+                  // svaki tip ima drugačije relevantne opsege (npr. opcije nemaju volumen).
+                  // Pretraga i sortiranje se zadržavaju.
+                  minPrice: undefined,
+                  maxPrice: undefined,
+                  minVolume: undefined,
+                  maxVolume: undefined,
+                  settlementFrom: undefined,
+                  settlementTo: undefined,
+                })
+              }
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filters.listingType === value
                   ? 'bg-primary-600 text-white'
@@ -267,12 +297,13 @@ export default function ListingsPage() {
                 <tbody className="divide-y divide-gray-100">
                   {listings.map((listing) => {
                     const isPositive = listing.changePercent >= 0
+                    const isExpiredOption = listing.listingType === 'OPTION' && isOptionExpiredByTicker(listing.ticker)
 
                     return (
                       <tr
                         key={listing.id}
                         onClick={() => navigate(hartijeDetailPath(listing.id))}
-                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                        className={`hover:bg-gray-50 cursor-pointer transition-colors${isExpiredOption ? ' opacity-60' : ''}`}
                       >
                         {/* Ticker + tip */}
                         <td className="px-4 py-3">
@@ -329,17 +360,27 @@ export default function ListingsPage() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           {showBuyButton ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                navigate(hartijeKupovinaPath(listing.id))
-                              }}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700 transition-colors"
-                            >
-                              <ShoppingCart className="w-3.5 h-3.5" />
-                              Kupi
-                            </button>
+                            isExpiredOption ? (
+                              <span
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-200 text-gray-400 text-xs font-medium cursor-not-allowed"
+                                title="Opcija je istekla"
+                              >
+                                <ShoppingCart className="w-3.5 h-3.5" />
+                                Isteklo
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  navigate(hartijeKupovinaPath(listing.id))
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700 transition-colors"
+                              >
+                                <ShoppingCart className="w-3.5 h-3.5" />
+                                Kupi
+                              </button>
+                            )
                           ) : (
                             <span className="text-xs text-gray-400">—</span>
                           )}
