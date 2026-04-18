@@ -34,16 +34,20 @@ function fmt(n: string | number | undefined, prefix = '$') {
 // ─── Order type labels ────────────────────────────────────────────────────────
 
 const ORDER_TYPE_LABELS: Record<TradingOrderType, string> = {
-  MARKET:     'Market — po tržišnoj ceni',
-  LIMIT:      'Limit — po zadatoj ceni',
-  STOP:       'Stop (Stop-Loss) — aktivira se na ceni',
+  MARKET: 'Market — po tržišnoj ceni',
+  LIMIT: 'Limit — po zadatoj ceni',
+  STOP: 'Stop (Stop-Loss) — aktivira se na ceni',
   STOP_LIMIT: 'Stop-Limit — Stop + Limit kombinacija',
 }
 
 // ─── Field visibility per order type ─────────────────────────────────────────
 
-function needsLimitPrice(ot: TradingOrderType) { return ot === 'LIMIT' || ot === 'STOP_LIMIT' }
-function needsStopPrice(ot: TradingOrderType)  { return ot === 'STOP'  || ot === 'STOP_LIMIT' }
+function needsLimitPrice(ot: TradingOrderType) {
+  return ot === 'LIMIT' || ot === 'STOP_LIMIT'
+}
+function needsStopPrice(ot: TradingOrderType) {
+  return ot === 'STOP' || ot === 'STOP_LIMIT'
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -63,24 +67,24 @@ export default function CreateOrderPage() {
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const initialSide: OrderSide = searchParams.get('direction') === 'SELL' ? 'SELL' : 'BUY'
-  const [side,        setSide]        = useState<OrderSide>(initialSide)
-  const [orderType,   setOrderType]   = useState<TradingOrderType>('MARKET')
-  const [quantity,    setQuantity]    = useState('1')
-  const [limitPrice,  setLimitPrice]  = useState('')
-  const [stopPrice,   setStopPrice]   = useState('')
-  const [allOrNone,   setAllOrNone]   = useState(false)
-  const [margin,      setMargin]      = useState(false)
+  const [side, setSide] = useState<OrderSide>(initialSide)
+  const [orderType, setOrderType] = useState<TradingOrderType>('MARKET')
+  const [quantity, setQuantity] = useState('1')
+  const [limitPrice, setLimitPrice] = useState('')
+  const [stopPrice, setStopPrice] = useState('')
+  const [allOrNone, setAllOrNone] = useState(false)
+  const [margin, setMargin] = useState(false)
   const [hasMarginPermission, setHasMarginPermission] = useState(false)
 
   // Account (client only)
-  const [accounts,        setAccounts]        = useState<AccountListItem[]>([])
+  const [accounts, setAccounts] = useState<AccountListItem[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(true)
-  const [accountId,       setAccountId]       = useState('')
+  const [accountId, setAccountId] = useState('')
 
   // ── Calculation state ───────────────────────────────────────────────────────
-  const [calc,        setCalc]        = useState<TradingCalculateResponse | null>(null)
+  const [calc, setCalc] = useState<TradingCalculateResponse | null>(null)
   const [calcLoading, setCalcLoading] = useState(false)
-  const [calcError,   setCalcError]   = useState<string | null>(null)
+  const [calcError, setCalcError] = useState<string | null>(null)
   const calcTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Market status (for closed/after-hours warning) ─────────────────────────
@@ -90,10 +94,10 @@ export default function CreateOrderPage() {
   const [ownedQty, setOwnedQty] = useState<number | null>(null)
 
   // ── Submission state ────────────────────────────────────────────────────────
-  const [submitted,    setSubmitted]    = useState(false)
-  const [submitting,   setSubmitting]   = useState(false)
-  const [submitError,  setSubmitError]  = useState<string | null>(null)
-  const [confirmOpen,  setConfirmOpen]  = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   // ── Load listing ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -157,8 +161,12 @@ export default function CreateOrderPage() {
         setHasMarginPermission(hasApproved)
         if (!hasApproved) setMargin(false)
       })
-      .catch(() => { if (!cancelled) setHasMarginPermission(false) })
-    return () => { cancelled = true }
+      .catch(() => {
+        if (!cancelled) setHasMarginPermission(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [isClient, isActuaryTrader])
 
   // ── Fetch exchange market status when listing loads ─────────────────────────
@@ -173,7 +181,9 @@ export default function CreateOrderPage() {
         if (ex && ex.marketStatus) setMarketStatus(ex.marketStatus as MarketStatus)
       })
       .catch(() => {}) // non-critical — warn silently
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [selectedListing])
 
   // ── Fetch owned quantity when SELL direction is chosen (skip for forex) ───────
@@ -189,29 +199,42 @@ export default function CreateOrderPage() {
         const holding = portfolio.holdings.find((h) => h.listingId === id)
         setOwnedQty(holding ? holding.availableQuantity : 0)
       })
-      .catch(() => { if (!cancelled) setOwnedQty(null) })
-    return () => { cancelled = true }
+      .catch(() => {
+        if (!cancelled) setOwnedQty(null)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [side, id, selectedListing])
 
   // ── Live calculation (debounced 600ms) ──────────────────────────────────────
   const runCalculate = useCallback(async () => {
     if (!id || !selectedListing) return
     const qty = parseFloat(quantity)
-    if (!qty || qty <= 0) { setCalc(null); return }
-    if (needsLimitPrice(orderType) && !limitPrice) { setCalc(null); return }
-    if (needsStopPrice(orderType)  && !stopPrice)  { setCalc(null); return }
+    if (!qty || qty <= 0) {
+      setCalc(null)
+      return
+    }
+    if (needsLimitPrice(orderType) && !limitPrice) {
+      setCalc(null)
+      return
+    }
+    if (needsStopPrice(orderType) && !stopPrice) {
+      setCalc(null)
+      return
+    }
 
     setCalcLoading(true)
     setCalcError(null)
     try {
       const res = await calculateOrder({
         orderType,
-        direction:    side,
-        listingId:    id,
-        quantity:     qty,
+        direction: side,
+        listingId: id,
+        quantity: qty,
         contractSize: selectedListing.contractSize,
         pricePerUnit: needsLimitPrice(orderType) ? limitPrice : undefined,
-        stopPrice:    needsStopPrice(orderType)  ? stopPrice  : undefined,
+        stopPrice: needsStopPrice(orderType) ? stopPrice : undefined,
         margin,
         allOrNone,
       })
@@ -227,7 +250,9 @@ export default function CreateOrderPage() {
   useEffect(() => {
     if (calcTimer.current) clearTimeout(calcTimer.current)
     calcTimer.current = setTimeout(runCalculate, 600)
-    return () => { if (calcTimer.current) clearTimeout(calcTimer.current) }
+    return () => {
+      if (calcTimer.current) clearTimeout(calcTimer.current)
+    }
   }, [runCalculate])
 
   // ── Guards ──────────────────────────────────────────────────────────────────
@@ -236,15 +261,21 @@ export default function CreateOrderPage() {
   }
 
   if (loadingDetail) {
-    return <div className="flex justify-center py-20"><LoadingSpinner /></div>
+    return (
+      <div className="flex justify-center py-20">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
   if (error || !selectedListing) {
     return (
       <div className="text-center py-20 text-gray-500">
         <p>Hartija nije pronađena.</p>
-        <button onClick={() => navigate(hartijeListPath())}
-          className="mt-4 text-primary-600 hover:underline text-sm">
+        <button
+          onClick={() => navigate(hartijeListPath())}
+          className="mt-4 text-primary-600 hover:underline text-sm"
+        >
           Nazad na listu
         </button>
       </div>
@@ -298,9 +329,8 @@ export default function CreateOrderPage() {
   }
 
   // Parse option underlying from OCC ticker: {UNDERLYING}{YYMMDD}{C|P}{STRIKE8}
-  const optionUnderlying = isOption && base.ticker.length > 15
-    ? base.ticker.slice(0, base.ticker.length - 15)
-    : ''
+  const optionUnderlying =
+    isOption && base.ticker.length > 15 ? base.ticker.slice(0, base.ticker.length - 15) : ''
   const optionContractSize = selectedListing.contractSize ?? 100
 
   if (isClient && isForex) {
@@ -312,8 +342,11 @@ export default function CreateOrderPage() {
             Forex parovi su dostupni samo aktuarima banke.
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-2">
-            <button type="button" onClick={() => navigate(hartijeListPath())}
-              className="px-4 py-2 rounded-lg bg-primary-600 text-sm font-medium text-white hover:bg-primary-700">
+            <button
+              type="button"
+              onClick={() => navigate(hartijeListPath())}
+              className="px-4 py-2 rounded-lg bg-primary-600 text-sm font-medium text-white hover:bg-primary-700"
+            >
               Nazad na listu
             </button>
           </div>
@@ -355,14 +388,14 @@ export default function CreateOrderPage() {
     try {
       await createTradingOrder({
         accountId: isClient ? accountId : '0',
-        listingId:    id,
+        listingId: id,
         orderType,
-        direction:    side,
-        quantity:     qty,
+        direction: side,
+        quantity: qty,
         contractSize: selectedListing.contractSize,
         pricePerUnit: needsLimitPrice(orderType) ? limitPrice : undefined,
-        stopPrice:    needsStopPrice(orderType)  ? stopPrice  : undefined,
-        afterHours:   false,
+        stopPrice: needsStopPrice(orderType) ? stopPrice : undefined,
+        afterHours: false,
         allOrNone,
         margin,
       })
@@ -384,20 +417,31 @@ export default function CreateOrderPage() {
         <h2 className="text-xl font-bold text-gray-900">Nalog je kreiran</h2>
         <p className="text-gray-500 text-sm">
           {side === 'BUY' ? 'Nalog za kupovinu' : 'Nalog za prodaju'}{' '}
-          <span className="font-semibold">{parseFloat(quantity)} × {base.ticker}</span> je uspešno kreiran.
+          <span className="font-semibold">
+            {parseFloat(quantity)} × {base.ticker}
+          </span>{' '}
+          je uspešno kreiran.
         </p>
         <div className="flex justify-center gap-3 pt-2">
-          <button onClick={() => navigate(hartijeListPath())}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+          <button
+            onClick={() => navigate(hartijeListPath())}
+            className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
             Nazad na listu
           </button>
           <button
             onClick={() => {
-              setSubmitted(false); setSubmitError(null)
-              setQuantity('1'); setLimitPrice(''); setStopPrice('')
-              setAllOrNone(false); setMargin(false); setCalc(null)
+              setSubmitted(false)
+              setSubmitError(null)
+              setQuantity('1')
+              setLimitPrice('')
+              setStopPrice('')
+              setAllOrNone(false)
+              setMargin(false)
+              setCalc(null)
             }}
-            className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm hover:bg-primary-700 transition-colors">
+            className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm hover:bg-primary-700 transition-colors"
+          >
             Novi nalog
           </button>
         </div>
@@ -409,8 +453,10 @@ export default function CreateOrderPage() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
       {/* Back nav */}
-      <button onClick={() => navigate(id ? hartijeDetailPath(id) : hartijeListPath())}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors">
+      <button
+        onClick={() => navigate(id ? hartijeDetailPath(id) : hartijeListPath())}
+        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+      >
         <ArrowLeft className="w-4 h-4" />
         Nazad na detalje
       </button>
@@ -418,7 +464,9 @@ export default function CreateOrderPage() {
       {/* Title */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Kreiraj nalog</h1>
-        <p className="text-sm text-gray-500 mt-1">{base.ticker} — {base.name}</p>
+        <p className="text-sm text-gray-500 mt-1">
+          {base.ticker} — {base.name}
+        </p>
       </div>
 
       {/* Current price card */}
@@ -430,9 +478,12 @@ export default function CreateOrderPage() {
             Bid: ${base.bid?.toFixed(4) ?? '—'} &nbsp;·&nbsp; Ask: ${base.ask?.toFixed(4) ?? '—'}
           </p>
         </div>
-        <div className={`flex items-center gap-1 text-sm font-semibold ${isPositive ? 'text-green-600' : 'text-red-500'}`}>
+        <div
+          className={`flex items-center gap-1 text-sm font-semibold ${isPositive ? 'text-green-600' : 'text-red-500'}`}
+        >
           {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-          {isPositive ? '+' : ''}{base.changePercent.toFixed(2)}%
+          {isPositive ? '+' : ''}
+          {base.changePercent.toFixed(2)}%
         </div>
       </div>
 
@@ -440,7 +491,8 @@ export default function CreateOrderPage() {
       {marketStatus === 'CLOSED' && (
         <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 flex items-center gap-2 text-sm">
           <AlertTriangle className="w-4 h-4 shrink-0" />
-          Berza je trenutno zatvorena. Nalog će biti kreiran, ali će se izvršiti tek kada se berza otvori.
+          Berza je trenutno zatvorena. Nalog će biti kreiran, ali će se izvršiti tek kada se berza
+          otvori.
         </div>
       )}
       {marketStatus === 'AFTER_HOURS' && (
@@ -453,14 +505,14 @@ export default function CreateOrderPage() {
       <div className="rounded-lg bg-slate-50 border border-slate-200 text-slate-800 px-4 py-3 text-sm flex gap-2">
         <Info className="w-4 h-4 shrink-0 mt-0.5 text-slate-500" />
         <span>
-          <strong>Tip naloga:</strong> za trgovanje po trenutnoj ponudi birajte <strong>Market</strong>. Limit i Stop zahtevaju unos cena;
-          prazna polja uz te tipove nisu validna — sistem validira unos pre slanja (druga potvrda u dijalogu).
+          <strong>Tip naloga:</strong> za trgovanje po trenutnoj ponudi birajte{' '}
+          <strong>Market</strong>. Limit i Stop zahtevaju unos cena; prazna polja uz te tipove nisu
+          validna — sistem validira unos pre slanja (druga potvrda u dijalogu).
         </span>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-5">
-
         {/* BUY / SELL */}
         <div>
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
@@ -468,14 +520,20 @@ export default function CreateOrderPage() {
           </label>
           <div className="flex rounded-lg overflow-hidden border border-gray-200">
             {(['BUY', 'SELL'] as OrderSide[]).map((s) => (
-              <button key={s} type="button" onClick={() => setSide(s)}
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSide(s)}
                 className={[
                   'flex-1 py-2.5 text-sm font-semibold transition-colors',
                   s === 'SELL' ? 'border-l border-gray-200' : '',
                   side === s
-                    ? s === 'BUY' ? 'bg-green-600 text-white' : 'bg-red-500 text-white'
+                    ? s === 'BUY'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-red-500 text-white'
                     : 'text-gray-500 hover:bg-gray-50',
-                ].join(' ')}>
+                ].join(' ')}
+              >
                 {s === 'BUY' ? 'Kupi' : 'Prodaj'}
               </button>
             ))}
@@ -487,24 +545,48 @@ export default function CreateOrderPage() {
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
             Tip naloga
           </label>
-          <select value={orderType} onChange={(e) => { setOrderType(e.target.value as TradingOrderType); setCalc(null) }}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white">
+          <select
+            value={orderType}
+            onChange={(e) => {
+              setOrderType(e.target.value as TradingOrderType)
+              setCalc(null)
+            }}
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
+          >
             {(Object.keys(ORDER_TYPE_LABELS) as TradingOrderType[]).map((ot) => (
-              <option key={ot} value={ot}>{ORDER_TYPE_LABELS[ot]}</option>
+              <option key={ot} value={ot}>
+                {ORDER_TYPE_LABELS[ot]}
+              </option>
             ))}
           </select>
           {/* Activation condition help text */}
           <div className="rounded-lg bg-blue-50 border border-blue-100 text-blue-800 px-3 py-2 text-xs flex gap-2 mt-2">
             <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-500" />
             <span>
-              {orderType === 'MARKET' && side === 'BUY' && 'Kupovina po trenutnom ask kursu. Izvršava se odmah čim engine preuzme nalog.'}
-              {orderType === 'MARKET' && side === 'SELL' && 'Prodaja po trenutnom bid kursu. Izvršava se odmah čim engine preuzme nalog.'}
-              {orderType === 'LIMIT' && side === 'BUY' && 'Izvršava se kada ask kurs padne na ili ispod zadate limit cene.'}
-              {orderType === 'LIMIT' && side === 'SELL' && 'Izvršava se kada bid kurs poraste na ili iznad zadate limit cene.'}
-              {orderType === 'STOP' && side === 'BUY' && 'Aktivira se kada tržišna cena dostigne stop cenu; zatim se kupuje po tržišnom kursu.'}
-              {orderType === 'STOP' && side === 'SELL' && 'Aktivira se kada tržišna cena padne na stop cenu; zatim se prodaje po tržišnom kursu.'}
-              {orderType === 'STOP_LIMIT' && side === 'BUY' && 'Aktivira se na stop ceni, a zatim čeka da ask bude ≤ limit ceni pre kupovine.'}
-              {orderType === 'STOP_LIMIT' && side === 'SELL' && 'Aktivira se na stop ceni, a zatim čeka da bid bude ≥ limit ceni pre prodaje.'}
+              {orderType === 'MARKET' &&
+                side === 'BUY' &&
+                'Kupovina po trenutnom ask kursu. Izvršava se odmah čim engine preuzme nalog.'}
+              {orderType === 'MARKET' &&
+                side === 'SELL' &&
+                'Prodaja po trenutnom bid kursu. Izvršava se odmah čim engine preuzme nalog.'}
+              {orderType === 'LIMIT' &&
+                side === 'BUY' &&
+                'Izvršava se kada ask kurs padne na ili ispod zadate limit cene.'}
+              {orderType === 'LIMIT' &&
+                side === 'SELL' &&
+                'Izvršava se kada bid kurs poraste na ili iznad zadate limit cene.'}
+              {orderType === 'STOP' &&
+                side === 'BUY' &&
+                'Aktivira se kada tržišna cena dostigne stop cenu; zatim se kupuje po tržišnom kursu.'}
+              {orderType === 'STOP' &&
+                side === 'SELL' &&
+                'Aktivira se kada tržišna cena padne na stop cenu; zatim se prodaje po tržišnom kursu.'}
+              {orderType === 'STOP_LIMIT' &&
+                side === 'BUY' &&
+                'Aktivira se na stop ceni, a zatim čeka da ask bude ≤ limit ceni pre kupovine.'}
+              {orderType === 'STOP_LIMIT' &&
+                side === 'SELL' &&
+                'Aktivira se na stop ceni, a zatim čeka da bid bude ≥ limit ceni pre prodaje.'}
             </span>
           </div>
         </div>
@@ -514,10 +596,16 @@ export default function CreateOrderPage() {
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
             Količina {selectedListing.contractSize > 1 && `(veličina kontr.: ${selectedListing.contractSize})`}
           </label>
-          <input type="number" min="1" step="1" required
+          <input
+            type="number"
+            min="1"
+            step="1"
+            required
             max={side === 'SELL' && ownedQty !== null ? ownedQty : undefined}
-            value={quantity} onChange={(e) => setQuantity(e.target.value)}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+          />
           {/* Available quantity hint for SELL orders */}
           {side === 'SELL' && ownedQty !== null && (
             <p className={`text-xs mt-1.5 ${ownedQty === 0 ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
@@ -532,7 +620,10 @@ export default function CreateOrderPage() {
           {isOption && side === 'BUY' && (
             <div className="mt-2 rounded-lg bg-purple-50 border border-purple-200 text-purple-800 px-3 py-2 text-xs flex gap-2">
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-purple-500" />
-              <span>1 ugovor = {optionContractSize} akcija{optionUnderlying ? ` ${optionUnderlying}` : ''}</span>
+              <span>
+                1 ugovor = {optionContractSize} akcija
+                {optionUnderlying ? ` ${optionUnderlying}` : ''}
+              </span>
             </div>
           )}
         </div>
@@ -543,10 +634,16 @@ export default function CreateOrderPage() {
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
               Limit cena ($)
             </label>
-            <input type="number" min="0.0001" step="0.0001" required
+            <input
+              type="number"
+              min="0.0001"
+              step="0.0001"
+              required
               placeholder={base.price.toFixed(4)}
-              value={limitPrice} onChange={(e) => setLimitPrice(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+              value={limitPrice}
+              onChange={(e) => setLimitPrice(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+            />
           </div>
         )}
 
@@ -556,26 +653,41 @@ export default function CreateOrderPage() {
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
               Stop cena ($)
             </label>
-            <input type="number" min="0.0001" step="0.0001" required
+            <input
+              type="number"
+              min="0.0001"
+              step="0.0001"
+              required
               placeholder={base.price.toFixed(4)}
-              value={stopPrice} onChange={(e) => setStopPrice(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300" />
+              value={stopPrice}
+              onChange={(e) => setStopPrice(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+            />
           </div>
         )}
 
         {/* AON + Margin checkboxes */}
         <div className="space-y-2">
           <label className="flex items-center gap-3 cursor-pointer select-none">
-            <input type="checkbox" checked={allOrNone} onChange={(e) => setAllOrNone(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+            <input
+              type="checkbox"
+              checked={allOrNone}
+              onChange={(e) => setAllOrNone(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
             <span className="text-sm text-gray-700">
               All or None (AON) — izvršiti samo ako je moguće u celosti
             </span>
           </label>
-          {(isActuaryTrader || isClient) && !isForex && side === 'BUY' && (
+
+          {(isActuaryTrader || hasMarginPermission) && !isForex && side === 'BUY' && (
             <label className="flex items-center gap-3 cursor-pointer select-none">
-              <input type="checkbox" checked={margin} onChange={(e) => setMargin(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+              <input
+                type="checkbox"
+                checked={margin}
+                onChange={(e) => setMargin(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
               <span className="text-sm text-gray-700">
                 {isClient
                   ? 'Margin — trgovanje kreditom (zahteva odobren kredit)'
@@ -586,7 +698,9 @@ export default function CreateOrderPage() {
         </div>
 
         {/* Live price estimate */}
-        <div className={`rounded-lg border p-4 space-y-1.5 transition-opacity ${calcLoading ? 'opacity-60' : 'opacity-100'} ${calc ? 'bg-gray-50 border-gray-100' : 'bg-gray-50 border-dashed border-gray-200'}`}>
+        <div
+          className={`rounded-lg border p-4 space-y-1.5 transition-opacity ${calcLoading ? 'opacity-60' : 'opacity-100'} ${calc ? 'bg-gray-50 border-gray-100' : 'bg-gray-50 border-dashed border-gray-200'}`}
+        >
           <div className="flex items-center gap-1.5 mb-2">
             <Info className="h-3.5 w-3.5 text-gray-400" />
             <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
@@ -600,47 +714,81 @@ export default function CreateOrderPage() {
               {calcError}
             </div>
           ) : calc ? (
-            isForex ? (() => {
-              const qty = parseFloat(quantity) || 0
-              const nominalBase = selectedListing.contractSize * qty
-              const rate = parseFloat(String(calc.pricePerUnit)) || 0
-              const nominalQuote = nominalBase * rate
-              return (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Kurs ({forexBase}/{forexQuote}):</span>
-                    <span className="font-mono font-medium">{rate.toFixed(6)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Nominalna vrednost:</span>
-                    <span className="font-mono">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
-                  </div>
-                  {side === 'BUY' ? (
-                    <>
-                      <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
-                        <span className="text-gray-500 font-medium">Skida se ({forexQuote}):</span>
-                        <span className="font-mono font-bold text-red-600">{nominalQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexQuote}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500 font-medium">Uplaćuje se ({forexBase}):</span>
-                        <span className="font-mono font-bold text-green-600">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
-                        <span className="text-gray-500 font-medium">Skida se ({forexBase}):</span>
-                        <span className="font-mono font-bold text-red-600">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500 font-medium">Uplaćuje se ({forexQuote}):</span>
-                        <span className="font-mono font-bold text-green-600">{nominalQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexQuote}</span>
-                      </div>
-                    </>
-                  )}
-                </>
-              )
-            })() : (
+            isForex ? (
+              (() => {
+                const qty = parseFloat(quantity) || 0
+                const nominalBase = selectedListing.contractSize * qty
+                const rate = parseFloat(String(calc.pricePerUnit)) || 0
+                const nominalQuote = nominalBase * rate
+                return (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">
+                        Kurs ({forexBase}/{forexQuote}):
+                      </span>
+                      <span className="font-mono font-medium">{rate.toFixed(6)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Nominalna vrednost:</span>
+                      <span className="font-mono">
+                        {nominalBase.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 4,
+                        })}{' '}
+                        {forexBase}
+                      </span>
+                    </div>
+                    {side === 'BUY' ? (
+                      <>
+                        <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
+                          <span className="text-gray-500 font-medium">Skida se ({forexQuote}):</span>
+                          <span className="font-mono font-bold text-red-600">
+                            {nominalQuote.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 4,
+                            })}{' '}
+                            {forexQuote}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500 font-medium">Uplaćuje se ({forexBase}):</span>
+                          <span className="font-mono font-bold text-green-600">
+                            {nominalBase.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 4,
+                            })}{' '}
+                            {forexBase}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="border-t border-gray-200 pt-2 flex justify-between text-sm">
+                          <span className="text-gray-500 font-medium">Skida se ({forexBase}):</span>
+                          <span className="font-mono font-bold text-red-600">
+                            {nominalBase.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 4,
+                            })}{' '}
+                            {forexBase}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500 font-medium">Uplaćuje se ({forexQuote}):</span>
+                          <span className="font-mono font-bold text-green-600">
+                            {nominalQuote.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 4,
+                            })}{' '}
+                            {forexQuote}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )
+              })()
+            ) : (
               <>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Cena / jed.:</span>
@@ -685,11 +833,20 @@ export default function CreateOrderPage() {
                 Nemate aktivnih računa. Otvorite račun da biste trgovali.
               </p>
             ) : (
-              <select required value={accountId} onChange={(e) => setAccountId(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white">
+              <select
+                required
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
+              >
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.broj_racuna} · {a.naziv_racuna} — {a.raspolozivo_stanje.toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {a.valuta_oznaka}
+                    {a.broj_racuna} · {a.naziv_racuna} —{' '}
+                    {a.raspolozivo_stanje.toLocaleString('sr-RS', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{' '}
+                    {a.valuta_oznaka}
                   </option>
                 ))}
               </select>
@@ -706,16 +863,20 @@ export default function CreateOrderPage() {
         )}
 
         {submitError && (
-          <div role="alert"
-            className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3">
+          <div
+            role="alert"
+            className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3"
+          >
             {submitError}
           </div>
         )}
 
-        <button type="submit"
+        <button
+          type="submit"
           disabled={
             submitting ||
-            !parseFloat(quantity) || parseFloat(quantity) <= 0 ||
+            !parseFloat(quantity) ||
+            parseFloat(quantity) <= 0 ||
             (isClient && (loadingAccounts || accounts.length === 0 || !accountId)) ||
             (!isForex && side === 'SELL' && ownedQty !== null && ownedQty === 0)
           }
@@ -724,7 +885,8 @@ export default function CreateOrderPage() {
             side === 'BUY'
               ? 'bg-green-600 hover:bg-green-700 text-white'
               : 'bg-red-500 hover:bg-red-600 text-white',
-          ].join(' ')}>
+          ].join(' ')}
+        >
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
               <LoadingSpinner />
@@ -749,11 +911,15 @@ export default function CreateOrderPage() {
             <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Hartija</span>
-                <span className="font-semibold text-gray-900">{base.ticker} — {base.name}</span>
+                <span className="font-semibold text-gray-900">
+                  {base.ticker} — {base.name}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-500">Smer</span>
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${side === 'BUY' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}`}>
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${side === 'BUY' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}`}
+                >
                   {side === 'BUY' ? 'Kupovina' : 'Prodaja'}
                 </span>
               </div>
@@ -766,88 +932,143 @@ export default function CreateOrderPage() {
                 <span className="font-medium">
                   {parseFloat(quantity)}
                   {selectedListing.contractSize > 1 && (
-                    <span className="text-gray-400 text-xs ml-1">× {selectedListing.contractSize} (kontr.)</span>
+                    <span className="text-gray-400 text-xs ml-1">
+                      × {selectedListing.contractSize} (kontr.)
+                    </span>
                   )}
                 </span>
               </div>
-              {calc && (
-                isForex ? (() => {
-                  const qty = parseFloat(quantity) || 0
-                  const nominalBase = selectedListing.contractSize * qty
-                  const rate = parseFloat(String(calc.pricePerUnit)) || 0
-                  const nominalQuote = nominalBase * rate
-                  return (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Kurs ({forexBase}/{forexQuote})</span>
-                        <span className="font-mono">{rate.toFixed(6)}</span>
-                      </div>
-                      {side === 'BUY' ? (
-                        <>
-                          <div className="border-t border-gray-200 pt-2 flex justify-between">
-                            <span className="text-gray-500">Skida se ({forexQuote})</span>
-                            <span className="font-mono font-bold text-red-600">{nominalQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexQuote}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Uplaćuje se ({forexBase})</span>
-                            <span className="font-mono font-bold text-green-600">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="border-t border-gray-200 pt-2 flex justify-between">
-                            <span className="text-gray-500">Skida se ({forexBase})</span>
-                            <span className="font-mono font-bold text-red-600">{nominalBase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexBase}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Uplaćuje se ({forexQuote})</span>
-                            <span className="font-mono font-bold text-green-600">{nominalQuote.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {forexQuote}</span>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )
-                })() : (
+              {calc &&
+                (isForex ? (
+                  (() => {
+                    const qty = parseFloat(quantity) || 0
+                    const nominalBase = selectedListing.contractSize * qty
+                    const rate = parseFloat(String(calc.pricePerUnit)) || 0
+                    const nominalQuote = nominalBase * rate
+                    return (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">
+                            Kurs ({forexBase}/{forexQuote})
+                          </span>
+                          <span className="font-mono">{rate.toFixed(6)}</span>
+                        </div>
+                        {side === 'BUY' ? (
+                          <>
+                            <div className="border-t border-gray-200 pt-2 flex justify-between">
+                              <span className="text-gray-500">Skida se ({forexQuote})</span>
+                              <span className="font-mono font-bold text-red-600">
+                                {nominalQuote.toLocaleString('en-US', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 4,
+                                })}{' '}
+                                {forexQuote}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Uplaćuje se ({forexBase})</span>
+                              <span className="font-mono font-bold text-green-600">
+                                {nominalBase.toLocaleString('en-US', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 4,
+                                })}{' '}
+                                {forexBase}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="border-t border-gray-200 pt-2 flex justify-between">
+                              <span className="text-gray-500">Skida se ({forexBase})</span>
+                              <span className="font-mono font-bold text-red-600">
+                                {nominalBase.toLocaleString('en-US', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 4,
+                                })}{' '}
+                                {forexBase}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Uplaćuje se ({forexQuote})</span>
+                              <span className="font-mono font-bold text-green-600">
+                                {nominalQuote.toLocaleString('en-US', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 4,
+                                })}{' '}
+                                {forexQuote}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )
+                  })()
+                ) : (
                   <>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Cena / jed.</span>
-                      <span className="font-mono">${parseFloat(String(calc.pricePerUnit)).toFixed(4)}</span>
+                      <span className="font-mono">
+                        ${parseFloat(String(calc.pricePerUnit)).toFixed(4)}
+                      </span>
                     </div>
                     <div className="border-t border-gray-200 pt-2 flex justify-between">
                       <span className="text-gray-500">Ukupno (aproks.)</span>
-                      <span className="font-mono font-bold text-gray-900">${parseFloat(String(calc.approximatePrice)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                      <span className="font-mono font-bold text-gray-900">
+                        $
+                        {parseFloat(String(calc.approximatePrice)).toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 4,
+                        })}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Provizija</span>
-                      <span className="font-mono text-amber-700">${parseFloat(String(calc.commission)).toFixed(4)}</span>
+                      <span className="font-mono text-amber-700">
+                        ${parseFloat(String(calc.commission)).toFixed(4)}
+                      </span>
                     </div>
                   </>
-                )
-              )}
+                ))}
+
             </div>
 
             {/* Account charge info */}
-            {isClient && accountId && accounts.length > 0 && (() => {
-              const acc = accounts.find((a) => a.id === accountId)
-              return acc ? (
-                <div className="rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm">
-                  <p className="text-xs text-primary-600 font-semibold uppercase tracking-wide mb-1">
-                    {side === 'BUY' ? 'Tereti se račun' : 'Odobrava se račun'}
-                  </p>
-                  <p className="font-semibold text-primary-900">{acc.naziv_racuna}</p>
-                  <p className="text-primary-700 font-mono text-xs">{acc.broj_racuna}</p>
-                  <p className="text-primary-600 text-xs mt-0.5">
-                    Raspoloživo: {acc.raspolozivo_stanje.toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {acc.valuta_oznaka}
-                  </p>
-                </div>
-              ) : null
-            })()}
+            {isClient &&
+              accountId &&
+              accounts.length > 0 &&
+              (() => {
+                const acc = accounts.find((a) => a.id === accountId)
+                return acc ? (
+                  <div className="rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm">
+                    <p className="text-xs text-primary-600 font-semibold uppercase tracking-wide mb-1">
+                      {side === 'BUY' ? 'Tereti se račun' : 'Odobrava se račun'}
+                    </p>
+                    <p className="font-semibold text-primary-900">{acc.naziv_racuna}</p>
+                    <p className="text-primary-700 font-mono text-xs">{acc.broj_racuna}</p>
+                    <p className="text-primary-600 text-xs mt-0.5">
+                      Raspoloživo:{' '}
+                      {acc.raspolozivo_stanje.toLocaleString('sr-RS', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{' '}
+                      {acc.valuta_oznaka}
+                    </p>
+                  </div>
+                ) : null
+              })()}
             {isActuaryTrader && !isClient && (
               <div className="rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-900">
-                {isForex
-                  ? <>Zamena ide sa <strong>trezor {forexBase}</strong> / <strong>trezor {forexQuote}</strong> računa banke.</>
-                  : <>Naplata ide sa <strong>bankovnog trezor računa</strong> (USD), kako definiše backend.</>
-                }
+                {isForex ? (
+                  <>
+                    Zamena ide sa <strong>trezor {forexBase}</strong> /{' '}
+                    <strong>trezor {forexQuote}</strong> računa banke.
+                  </>
+                ) : (
+                  <>
+                    Naplata ide sa <strong>bankovnog trezor računa</strong> (USD), kako definiše
+                    backend.
+                  </>
+                )}
               </div>
             )}
 
@@ -858,7 +1079,12 @@ export default function CreateOrderPage() {
             )}
 
             <div className="flex justify-end gap-3 pt-1">
-              <Button variant="secondary" size="sm" onClick={() => setConfirmOpen(false)} disabled={submitting}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setConfirmOpen(false)}
+                disabled={submitting}
+              >
                 Odustani
               </Button>
               <Button

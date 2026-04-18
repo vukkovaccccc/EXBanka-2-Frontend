@@ -166,14 +166,14 @@ describe('Scenario 40: Izmena podataka klijenta', () => {
       body: MOCK_CLIENT_DETAIL,
     }).as('getClientEdit')
 
+    cy.intercept('GET', '/api/client/42/trade-permission', {
+      statusCode: 200, body: { has_trade_permission: true },
+    }).as('getTradePerm')
     cy.contains('button', 'Izmeni').click()
     cy.wait('@getClientEdit')
 
-    cy.get('input[name="phone"], input[placeholder*="telefon"]').first().then(($input) => {
-      cy.wrap($input).clear().type('+381699999999')
-    })
-
-    cy.contains('button', 'Sačuvaj').click()
+    cy.get('input[name="phone_number"]').clear().type('+381699999999')
+    cy.contains('button', 'Sačuvaj izmene').click()
     cy.wait('@updateClient')
 
     cy.get('@updateClient').its('response.statusCode').should('eq', 200)
@@ -184,6 +184,9 @@ describe('Scenario 40: Izmena podataka klijenta', () => {
       statusCode: 200,
       body: MOCK_CLIENT_DETAIL,
     }).as('getClientEdit')
+    cy.intercept('GET', '/api/client/42/trade-permission', {
+      statusCode: 200, body: { has_trade_permission: true },
+    }).as('getTradePerm')
     cy.intercept('PATCH', '/api/client/42', {
       statusCode: 200,
       body: {},
@@ -192,8 +195,8 @@ describe('Scenario 40: Izmena podataka klijenta', () => {
     cy.contains('button', 'Izmeni').click()
     cy.wait('@getClientEdit')
 
-    cy.get('input[name="phone"], input[placeholder*="telefon"]').first().clear().type('+381699999999')
-    cy.contains('button', 'Sačuvaj').click()
+    cy.get('input[name="phone_number"]').clear().type('+381699999999')
+    cy.contains('button', 'Sačuvaj izmene').click()
     cy.wait('@updateClientPatch')
 
     cy.get('@updateClientPatch').its('response.statusCode').should('eq', 200)
