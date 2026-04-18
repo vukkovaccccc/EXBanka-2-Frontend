@@ -97,8 +97,10 @@ export default function LoginPage() {
         e.grpcCode === GrpcStatus.DEADLINE_EXCEEDED
       ) {
         setError('Sistem je trenutno nedostupan. Molimo pokušajte kasnije.')
+      } else if (e.grpcCode === GrpcStatus.NOT_FOUND) {
+        setError('Korisnik ne postoji')
       } else if (e.grpcCode === GrpcStatus.UNAUTHENTICATED) {
-        setError('Pogrešan email ili lozinka. Uverite se da su podaci tačni.')
+        setError('Neispravni unos')
       } else {
         setError(e.message ?? 'Nešto nije u redu. Pokušajte ponovo.')
       }
