@@ -111,6 +111,7 @@ describe('Scenariji 16–18: Permisije zaposlenih', () => {
           headers: { Authorization: `Bearer ${adminToken}` },
         }).then((resp) => {
           const permissions: string[] = resp.body.employee?.permissions ?? []
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
           expect(permissions, 'novi zaposleni nema permisije').to.be.empty
         })
       })

@@ -35,6 +35,7 @@ describe('Feature 1: Autentifikacija korisnika', () => {
       expect(i.response?.statusCode, 'API vratio 200').to.equal(200)
       const body = i.response?.body
       expect(body).to.have.property('accessToken')
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       expect(body.accessToken).to.be.a('string').and.not.be.empty
       expect(body).to.have.property('refreshToken')
     })

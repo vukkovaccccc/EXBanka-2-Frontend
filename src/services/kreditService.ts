@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// TODO(tech-debt): zameniti `any` eksplicitnim DTO tipovima za raw backend odgovor
+// i ukloniti ovaj disable. Mapperi su defensive jer backend nije snake/camel dosledan.
+
 import { apiGet, apiPost } from './grpcClient'
 import type { Kredit, KreditDetail, KreditRata, KreditZahtev, ZahtevZaKreditRequest } from '@/types'
 

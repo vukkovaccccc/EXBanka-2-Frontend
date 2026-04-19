@@ -325,7 +325,9 @@ export default function CreateOrderPage() {
       const d = JSON.parse(selectedListing.detailsJson)
       forexBase = d.base_currency ?? ''
       forexQuote = d.quote_currency ?? ''
-    } catch {}
+    } catch {
+      // detailsJson je opcion — preskoči tiho ako nije validan JSON
+    }
   }
 
   // Parse option underlying from OCC ticker: {UNDERLYING}{YYMMDD}{C|P}{STRIKE8}
