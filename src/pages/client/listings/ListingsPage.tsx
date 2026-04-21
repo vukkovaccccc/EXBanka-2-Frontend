@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { getListings } from '@/services/listingsService'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, ShoppingCart, TrendingUp, TrendingDown } from 'lucide-react'
 import { useListingsStore } from '@/store/useListingsStore'
 import { useAuthStore } from '@/store/authStore'
-import type { ListingType } from '@/types'
+import type { Listing, ListingType } from '@/types'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import ErrorMessage from '@/components/common/ErrorMessage'
 import { hartijeDetailPath, hartijeKupovinaPath } from '@/router/helpers'
@@ -17,8 +18,18 @@ const ALL_TYPE_TABS: { label: string; value: ListingType | '' }[] = [
   { label: 'Opcije', value: 'OPTION' },
 ]
 
-/** Klijenti ne vide Forex — sve ostale hartije (STOCK, FUTURE, OPTION) su dostupne. */
-const CLIENT_ALLOWED_TYPES = new Set<ListingType | ''>(['', 'STOCK', 'FUTURE', 'OPTION'])
+const TYPE_LABEL: Record<ListingType, string> = {
+  STOCK:  'Akcije',
+  FUTURE: 'Fjučersi',
+  OPTION: 'Opcije',
+  FOREX:  'Forex',
+}
+
+/** Redosled grupa u „Sve“ tabu. */
+const GROUP_ORDER: ListingType[] = ['STOCK', 'FUTURE', 'OPTION', 'FOREX']
+
+/** Klijenti ne vide Forex ni Opcije — dostupne su samo Akcije i Fjučersi (i kroz „Sve“). */
+const CLIENT_ALLOWED_TYPES = new Set<ListingType | ''>(['', 'STOCK', 'FUTURE'])
 
 /**
  * Za OPTION listing, OCC ticker kodira datum isteka: {UNDERLYING}{YYMMDD}{C|P}{STRIKE8}.
@@ -64,13 +75,80 @@ export default function ListingsPage() {
     fetchListings,
   } = useListingsStore()
 
+  // ── SVE tab: paralelni fetch po tipu ─────────────────────────────────────
+  const isSveTab = filters.listingType === ''
+
+  const sveTypes = useMemo<ListingType[]>(
+    () => (isClient ? ['STOCK', 'FUTURE'] : ['STOCK', 'FUTURE', 'OPTION', 'FOREX']),
+    [isClient]
+  )
+
+  const [sveListings, setSveListings] = useState<Listing[]>([])
+  const [sveTotal, setSveTotal] = useState(0)
+  const [sveLoading, setSveLoading] = useState(false)
+  const [sveError, setSveError] = useState<string | null>(null)
+  const [refreshTick, setRefreshTick] = useState(0)
+
   const typeTabs = useMemo(() => {
-    // Klijenti ne vide FOREX; sve ostalo (STOCK, FUTURE, OPTION) dostupno svima.
+    // Klijenti ne vide FOREX ni OPTION — samo STOCK, FUTURE i „Sve“.
     if (isClient) {
       return ALL_TYPE_TABS.filter((t) => CLIENT_ALLOWED_TYPES.has(t.value))
     }
     return ALL_TYPE_TABS
   }, [isClient])
+
+  // SVE tab koristi sveListings (već filtrirani po tipu); ostali tabovi filtriraju iz store-a.
+  const visibleListings = useMemo<Listing[]>(() => {
+    if (isSveTab) return sveListings
+    if (isClient) {
+      return listings.filter((l) => l.listingType !== 'OPTION' && l.listingType !== 'FOREX')
+    }
+    return listings
+  }, [isSveTab, sveListings, listings, isClient])
+
+  // ── Client-side search za OPTION tab (full + partial, po svim poljima) ──
+  const [optionSearch, setOptionSearch] = useState('')
+
+  // Resetuj lokalnu pretragu kad korisnik napusti OPTION tab
+  useEffect(() => {
+    if (filters.listingType !== 'OPTION') setOptionSearch('')
+  }, [filters.listingType])
+
+  const displayedListings = useMemo<Listing[]>(() => {
+    if (filters.listingType !== 'OPTION') return visibleListings
+    const q = optionSearch.trim().toLowerCase()
+    if (!q) return visibleListings
+    return visibleListings.filter((l) => {
+      const fields: string[] = [
+        l.ticker,
+        l.name,
+        l.listingType,
+        String(l.price),
+        l.price.toFixed(4),
+        String(l.changePercent),
+        l.changePercent.toFixed(2),
+        l.volume,
+        String(parseInt(l.volume, 10)),
+        String(l.initialMarginCost),
+        l.initialMarginCost.toFixed(2),
+      ]
+      return fields.some((v) => typeof v === 'string' && v.toLowerCase().includes(q))
+    })
+  }, [visibleListings, filters.listingType, optionSearch])
+
+  // ── Grupisane liste za „Sve“ tab ──────────────────────────────────────────
+  const groupedListings = useMemo(() => {
+    if (filters.listingType !== '') return null
+    const groups = new Map<ListingType, Listing[]>()
+    for (const t of GROUP_ORDER) groups.set(t, [])
+    for (const l of visibleListings) {
+      const bucket = groups.get(l.listingType)
+      if (bucket) bucket.push(l)
+    }
+    return GROUP_ORDER
+      .map((t) => ({ type: t, items: groups.get(t) ?? [] }))
+      .filter((g) => g.items.length > 0)
+  }, [visibleListings, filters.listingType])
 
   // Ako je klijent ostao na Forex/Opcije iz prethodne sesije, vrati na Sve
   useEffect(() => {
@@ -79,16 +157,40 @@ export default function ListingsPage() {
     }
   }, [isClient, filters.listingType, setFilters])
 
-  // Osvežavaj listu kada se menjaju filteri
+  // Osvežavaj listu kada se menjaju filteri ili refreshTick
   useEffect(() => {
-    fetchListings()
-  }, [filters])
-
-  // Automatsko osvežavanje svakih 60 sekundi (Scenario 17)
-  useEffect(() => {
-    const timer = setInterval(() => {
+    if (!isSveTab) {
       fetchListings()
-    }, 60_000)
+      return
+    }
+    let cancelled = false
+    setSveLoading(true)
+    setSveError(null)
+    Promise.all(
+      sveTypes.map((type) =>
+        getListings({ ...filters, listingType: type, page: 1, pageSize: 200 })
+      )
+    )
+      .then((results) => {
+        if (cancelled) return
+        const grouped = new Map<ListingType, Listing[]>()
+        for (const t of GROUP_ORDER) grouped.set(t, [])
+        for (let i = 0; i < sveTypes.length; i++) {
+          grouped.set(sveTypes[i], results[i].listings ?? [])
+        }
+        setSveListings(GROUP_ORDER.flatMap((t) => grouped.get(t) ?? []))
+        setSveTotal(results.reduce((sum, r) => sum + (r.total ?? 0), 0))
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setSveError(e instanceof Error ? e.message : 'Greška pri učitavanju')
+      })
+      .finally(() => { if (!cancelled) setSveLoading(false) })
+    return () => { cancelled = true }
+  }, [filters, sveTypes, refreshTick])
+
+  // Automatsko osvežavanje svakih 60 sekundi
+  useEffect(() => {
+    const timer = setInterval(() => setRefreshTick((t) => t + 1), 60_000)
     return () => clearInterval(timer)
   }, [])
 
@@ -99,17 +201,134 @@ export default function ListingsPage() {
 
   const currentSortValue = `${filters.sortBy ?? 'ticker'}|${filters.sortOrder ?? 'ASC'}`
 
+  // ── Row renderer ──────────────────────────────────────────────────────────
+  function renderListingRow(listing: Listing) {
+    const isPositive = listing.changePercent >= 0
+    const isExpiredOption = listing.listingType === 'OPTION' && isOptionExpiredByTicker(listing.ticker)
+
+    return (
+      <tr
+        key={listing.id}
+        onClick={() => navigate(hartijeDetailPath(listing.id))}
+        className={`hover:bg-gray-50 cursor-pointer transition-colors${isExpiredOption ? ' opacity-60' : ''}`}
+      >
+        {/* Ticker + tip */}
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900 text-sm">
+              {listing.ticker}
+            </span>
+            <span className="hidden sm:inline px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 uppercase">
+              {listing.listingType}
+            </span>
+          </div>
+        </td>
+
+        {/* Naziv */}
+        <td className="px-4 py-3 text-sm text-gray-500 hidden sm:table-cell max-w-xs truncate">
+          {listing.name}
+        </td>
+
+        {/* Cena */}
+        <td className="px-4 py-3 text-right font-mono text-sm text-gray-900">
+          ${listing.price.toFixed(4)}
+        </td>
+
+        {/* Promena % */}
+        <td className="px-4 py-3 text-right">
+          <span
+            className={`flex items-center justify-end gap-1 text-sm font-medium ${
+              isPositive ? 'text-green-600' : 'text-red-500'
+            }`}
+          >
+            {isPositive ? (
+              <TrendingUp className="w-3.5 h-3.5" />
+            ) : (
+              <TrendingDown className="w-3.5 h-3.5" />
+            )}
+            {isPositive ? '+' : ''}
+            {listing.changePercent.toFixed(2)}%
+          </span>
+        </td>
+
+        {/* Volumen */}
+        <td className="px-4 py-3 text-right text-sm text-gray-600 font-mono">
+          {parseInt(listing.volume, 10).toLocaleString()}
+        </td>
+
+        {/* Initial Margin Cost */}
+        <td className="px-4 py-3 text-right text-sm text-gray-600 font-mono">
+          ${listing.initialMarginCost.toFixed(2)}
+        </td>
+
+        {/* Akcije */}
+        <td
+          className="px-4 py-3 text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {showBuyButton ? (
+            isExpiredOption ? (
+              <span
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-200 text-gray-400 text-xs font-medium cursor-not-allowed"
+                title="Opcija je istekla"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                Isteklo
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate(hartijeKupovinaPath(listing.id))
+                }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700 transition-colors"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                Kupi
+              </button>
+            )
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )}
+        </td>
+      </tr>
+    )
+  }
+
+  // ── Body content (grupisano za „Sve“, flat inače) ─────────────────────────
+  const isEmpty = groupedListings !== null
+    ? groupedListings.length === 0
+    : displayedListings.length === 0
+
+  const tableBody = groupedListings !== null
+    ? groupedListings.flatMap((group) => [
+        <tr key={`group-${group.type}`} className="bg-gray-100">
+          <td
+            colSpan={7}
+            className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600"
+          >
+            {TYPE_LABEL[group.type]} ({group.items.length})
+          </td>
+        </tr>,
+        ...group.items.map((listing) => renderListingRow(listing)),
+      ])
+    : displayedListings.map((listing) => renderListingRow(listing))
+
   return (
     <div className="space-y-6">
       {/* Naslov */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Hartije od vrednosti</h1>
         <button
-          onClick={() => fetchListings()}
-          disabled={loading}
+          onClick={() => {
+            if (isSveTab) setRefreshTick((t) => t + 1)
+            else fetchListings()
+          }}
+          disabled={isSveTab ? sveLoading : loading}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${(isSveTab ? sveLoading : loading) ? 'animate-spin' : ''}`} />
           Osveži
         </button>
       </div>
@@ -150,9 +369,19 @@ export default function ListingsPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
-            placeholder="Pretraži po Ticker-u ili Nazivu..."
-            value={filters.search ?? ''}
-            onChange={(e) => setFilters({ search: e.target.value })}
+            placeholder={
+              filters.listingType === 'OPTION'
+                ? 'Pretraži po svim poljima (ticker, naziv, cena, volumen…)'
+                : 'Pretraži po Ticker-u ili Nazivu...'
+            }
+            value={filters.listingType === 'OPTION' ? optionSearch : (filters.search ?? '')}
+            onChange={(e) => {
+              if (filters.listingType === 'OPTION') {
+                setOptionSearch(e.target.value)
+              } else {
+                setFilters({ search: e.target.value })
+              }
+            }}
             className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
           />
           <select
@@ -254,15 +483,15 @@ export default function ListingsPage() {
 
       {/* Tabela */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        {loading ? (
+        {(isSveTab ? sveLoading : loading) ? (
           <div className="flex justify-center py-16">
             <LoadingSpinner />
           </div>
-        ) : error ? (
+        ) : (isSveTab ? sveError : error) ? (
           <div className="p-6">
-            <ErrorMessage message={error} />
+            <ErrorMessage message={(isSveTab ? sveError : error)!} />
           </div>
-        ) : listings.length === 0 ? (
+        ) : isEmpty ? (
           <div className="text-center py-16 text-gray-400">
             <p className="text-sm">Nema hartija koje odgovaraju filterima.</p>
           </div>
@@ -295,128 +524,44 @@ export default function ListingsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {listings.map((listing) => {
-                    const isPositive = listing.changePercent >= 0
-                    const isExpiredOption = listing.listingType === 'OPTION' && isOptionExpiredByTicker(listing.ticker)
-
-                    return (
-                      <tr
-                        key={listing.id}
-                        onClick={() => navigate(hartijeDetailPath(listing.id))}
-                        className={`hover:bg-gray-50 cursor-pointer transition-colors${isExpiredOption ? ' opacity-60' : ''}`}
-                      >
-                        {/* Ticker + tip */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-900 text-sm">
-                              {listing.ticker}
-                            </span>
-                            <span className="hidden sm:inline px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 uppercase">
-                              {listing.listingType}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Naziv */}
-                        <td className="px-4 py-3 text-sm text-gray-500 hidden sm:table-cell max-w-xs truncate">
-                          {listing.name}
-                        </td>
-
-                        {/* Cena */}
-                        <td className="px-4 py-3 text-right font-mono text-sm text-gray-900">
-                          ${listing.price.toFixed(4)}
-                        </td>
-
-                        {/* Promena % */}
-                        <td className="px-4 py-3 text-right">
-                          <span
-                            className={`flex items-center justify-end gap-1 text-sm font-medium ${
-                              isPositive ? 'text-green-600' : 'text-red-500'
-                            }`}
-                          >
-                            {isPositive ? (
-                              <TrendingUp className="w-3.5 h-3.5" />
-                            ) : (
-                              <TrendingDown className="w-3.5 h-3.5" />
-                            )}
-                            {isPositive ? '+' : ''}
-                            {listing.changePercent.toFixed(2)}%
-                          </span>
-                        </td>
-
-                        {/* Volumen */}
-                        <td className="px-4 py-3 text-right text-sm text-gray-600 font-mono">
-                          {parseInt(listing.volume, 10).toLocaleString()}
-                        </td>
-
-                        {/* Initial Margin Cost */}
-                        <td className="px-4 py-3 text-right text-sm text-gray-600 font-mono">
-                          ${listing.initialMarginCost.toFixed(2)}
-                        </td>
-
-                        {/* Akcije */}
-                        <td
-                          className="px-4 py-3 text-center"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {showBuyButton ? (
-                            isExpiredOption ? (
-                              <span
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-200 text-gray-400 text-xs font-medium cursor-not-allowed"
-                                title="Opcija je istekla"
-                              >
-                                <ShoppingCart className="w-3.5 h-3.5" />
-                                Isteklo
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  navigate(hartijeKupovinaPath(listing.id))
-                                }}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700 transition-colors"
-                              >
-                                <ShoppingCart className="w-3.5 h-3.5" />
-                                Kupi
-                              </button>
-                            )
-                          ) : (
-                            <span className="text-xs text-gray-400">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {tableBody}
                 </tbody>
               </table>
             </div>
 
             {/* Footer sa paginacijom */}
             <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-              <span className="text-xs text-gray-400">
-                Prikazano {((filters.page ?? 1) - 1) * (filters.pageSize ?? 50) + 1}–
-                {Math.min((filters.page ?? 1) * (filters.pageSize ?? 50), total)} od {total} hartija
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setFilters({ page: Math.max(1, (filters.page ?? 1) - 1) })}
-                  disabled={(filters.page ?? 1) <= 1 || loading}
-                  className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  ‹ Prethodno
-                </button>
-                <span className="text-xs text-gray-500">
-                  Str. {filters.page ?? 1} / {Math.max(1, Math.ceil(total / (filters.pageSize ?? 50)))}
+              {isSveTab ? (
+                <span className="text-xs text-gray-400">
+                  Ukupno {sveTotal} hartija
                 </span>
-                <button
-                  onClick={() => setFilters({ page: (filters.page ?? 1) + 1 })}
-                  disabled={(filters.page ?? 1) >= Math.ceil(total / (filters.pageSize ?? 50)) || loading}
-                  className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  Sledeće ›
-                </button>
-              </div>
+              ) : (
+                <>
+                  <span className="text-xs text-gray-400">
+                    Prikazano {((filters.page ?? 1) - 1) * (filters.pageSize ?? 50) + 1}–
+                    {Math.min((filters.page ?? 1) * (filters.pageSize ?? 50), total)} od {total} hartija
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setFilters({ page: Math.max(1, (filters.page ?? 1) - 1) })}
+                      disabled={(filters.page ?? 1) <= 1 || loading}
+                      className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      ‹ Prethodno
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      Str. {filters.page ?? 1} / {Math.max(1, Math.ceil(total / (filters.pageSize ?? 50)))}
+                    </span>
+                    <button
+                      onClick={() => setFilters({ page: (filters.page ?? 1) + 1 })}
+                      disabled={(filters.page ?? 1) >= Math.ceil(total / (filters.pageSize ?? 50)) || loading}
+                      className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Sledeće ›
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}

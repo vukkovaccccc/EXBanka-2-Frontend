@@ -120,14 +120,85 @@ describe('Celina 1 — Scenario 7: Detalji računa', () => {
 })
 
 // ─── Scenario 8: Promena naziva računa ────────────────────────────────────────
-// Ova operacija zahteva aktivan račun; za fresh klijenta skipujemo.
+// Operacija zahteva aktivan račun — koristimo cy.intercept da stub-ujemo
+// AccountDetail odgovor i PATCH za rename, pa se testira pravi UI flow
+// bez potrebe za setup-om računa u bazi.
 
 describe('Celina 1 — Scenario 8: Promena naziva računa', () => {
-  // Scenario requires an existing account on a logged-in client, which
-  // the test environment does not provide via API. Keeping the test in
-  // the file as a skip to preserve the count.
-  it.skip('S8: otvara dijalog za promenu naziva i uspešno šalje novi naziv', () => {
-    // no-op
+  let client: { email: string; password: string }
+
+  before(() => {
+    cy.createActivatedClient().then((u) => {
+      client = u
+    })
+  })
+
+  beforeEach(() => {
+    cy.clearLocalStorage()
+    cy.clearCookies()
+
+    // Stub lista računa (da sadrži naš stubovan račun sa id=1)
+    cy.intercept('GET', '/api/bank/client/accounts', {
+      statusCode: 200,
+      body: {
+        accounts: [
+          {
+            id: '1',
+            brojRacuna: '1234567890123456',
+            nazivRacuna: 'Moj tekući račun',
+            kategorijaRacuna: 'TEKUCI',
+            vrstaRacuna: 'LICNI',
+            valutaOznaka: 'RSD',
+            stanjeRacuna: '10000',
+            rezervisanaSredstva: '0',
+            raspolozivoStanje: '10000',
+          },
+        ],
+      },
+    }).as('getAccounts')
+
+    // Stub detalja računa (GetAccountDetail)
+    cy.intercept('GET', '/api/bank/client/accounts/1', {
+      statusCode: 200,
+      body: {
+        id: '1',
+        brojRacuna: '1234567890123456',
+        nazivRacuna: 'Moj tekući račun',
+        kategorijaRacuna: 'TEKUCI',
+        vrstaRacuna: 'LICNI',
+        valutaOznaka: 'RSD',
+        stanjeRacuna: '10000',
+        rezervisanaSredstva: '0',
+        raspolozivoStanje: '10000',
+        dnevniLimit: '0',
+        mesecniLimit: '0',
+      },
+    }).as('getAccountDetail')
+
+    // Stub PATCH za preimenovanje
+    cy.intercept('PATCH', '/api/bank/client/accounts/1/name', {
+      statusCode: 200,
+      body: {},
+    }).as('renameAccount')
+
+    cy.login(client.email, client.password)
+    cy.url({ timeout: 10_000 }).should('include', '/client')
+    cy.get('aside').contains('Računi').click()
+    cy.url({ timeout: 6_000 }).should('include', '/client/accounts')
+    cy.wait('@getAccounts', { timeout: 10_000 })
+    // SPA navigacija na detalje računa
+    cy.contains('button', 'Detalji').click()
+    cy.url({ timeout: 6_000 }).should('include', '/client/accounts/1')
+    cy.wait('@getAccountDetail', { timeout: 10_000 })
+  })
+
+  it('S8: otvara dijalog za promenu naziva i uspešno šalje novi naziv', () => {
+    cy.contains('button', 'Promena naziva računa').click()
+    cy.get('input[placeholder="Unesite novi naziv"]').should('be.visible').clear().type('Novo ime računa')
+    cy.contains('button', 'Sačuvaj').click()
+    cy.wait('@renameAccount').its('request.body').should('deep.include', {
+      noviNaziv: 'Novo ime računa',
+    })
   })
 })
 

@@ -13,8 +13,6 @@ import Button from '@/components/common/Button'
 import Dialog from '@/components/common/Dialog'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { getTaxUsers, calculateAndCollectTax } from '@/services/portfolioService'
-import { getClients } from '@/services/clientService'
-import { getAgents } from '@/services/actuaryService'
 import type { TaxUserRecord } from '@/services/portfolioService'
 
 // ─── Enriched record (adds display name) ─────────────────────────────────────
@@ -117,37 +115,16 @@ export default function TaxTrackingPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const [taxRes, clientsRes, agentsRes] = await Promise.all([
-        getTaxUsers({
-          firstName: filterFirstName.trim() || undefined,
-          lastName: filterLastName.trim() || undefined,
-        }),
-        getClients({ limit: 1000 }),
-        getAgents({}),
-      ])
-
-      // Build name lookup maps keyed by string ID
-      const clientMap = new Map<string, string>()
-      for (const c of clientsRes.clients) {
-        clientMap.set(c.id, `${c.first_name} ${c.last_name}`)
-      }
-
-      const agentMap = new Map<string, string>()
-      for (const a of agentsRes.agents) {
-        agentMap.set(a.employee_id, `${a.first_name} ${a.last_name}`)
-      }
+      const taxRes = await getTaxUsers({
+        firstName: filterFirstName.trim() || undefined,
+        lastName: filterLastName.trim() || undefined,
+      })
 
       const enriched: TaxRecord[] = taxRes.users.map((u: TaxUserRecord) => {
         const ut = u.userType as UserType
-        const fromApi = [u.firstName, u.lastName].filter(Boolean).join(' ').trim()
-        let displayName: string
-        if (fromApi) {
-          displayName = fromApi
-        } else if (ut === 'CLIENT') {
-          displayName = clientMap.get(u.userId) ?? `Klijent #${u.userId}`
-        } else {
-          displayName = agentMap.get(u.userId) ?? `Aktuar #${u.userId}`
-        }
+        const displayName =
+          [u.firstName, u.lastName].filter(Boolean).join(' ').trim() ||
+          (ut === 'CLIENT' ? `Klijent #${u.userId}` : `Aktuar #${u.userId}`)
         return {
           userId: u.userId,
           displayName,

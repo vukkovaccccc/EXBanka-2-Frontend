@@ -124,14 +124,24 @@ function OptionsChainTable({
   stockPrice: number
 }) {
   const [showItm, setShowItm] = useState(false)
+  // null = bez filtriranja (svi strike-ovi)
+  const [strikesAround, setStrikesAround] = useState<number | null>(null)
 
-  const visibleStrikes = useMemo(
-    () =>
-      showItm
-        ? group.strikes.filter((s) => s < stockPrice || s > stockPrice)
-        : group.strikes,
-    [group.strikes, stockPrice, showItm]
-  )
+  const visibleStrikes = useMemo(() => {
+    // Osnovna lista: (opciono) samo ITM
+    const base = showItm
+      ? group.strikes.filter((s) => s < stockPrice || s > stockPrice)
+      : group.strikes
+
+    if (strikesAround === null) return base
+
+    // N reda iznad i N reda ispod share price-a:
+    // „ispod" = strike < stockPrice (uzmi poslednjih N, tj. one najbliže ceni)
+    // „iznad" = strike >= stockPrice (uzmi prvih N, tj. one najbliže ceni)
+    const below = base.filter((s) => s < stockPrice).slice(-strikesAround)
+    const above = base.filter((s) => s >= stockPrice).slice(0, strikesAround)
+    return [...below, ...above]
+  }, [group.strikes, stockPrice, showItm, strikesAround])
 
   return (
     <div className="mt-3 space-y-2">
@@ -150,6 +160,23 @@ function OptionsChainTable({
               className="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
             />
             <span>Samo In The Money</span>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-gray-600 select-none">
+            <span>Strike-ovi oko cene:</span>
+            <select
+              value={strikesAround ?? ''}
+              onChange={(e) =>
+                setStrikesAround(e.target.value === '' ? null : parseInt(e.target.value, 10))
+              }
+              className="rounded border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary-300"
+            >
+              <option value="">Svi</option>
+              <option value="1">±1</option>
+              <option value="2">±2</option>
+              <option value="3">±3</option>
+              <option value="5">±5</option>
+              <option value="10">±10</option>
+            </select>
           </label>
         </div>
       </div>

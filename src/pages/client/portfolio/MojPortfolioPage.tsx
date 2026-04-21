@@ -308,6 +308,7 @@ export default function MojPortfolioPage() {
                       <Th>Tip</Th>
                       <Th>Ticker</Th>
                       <Th right>Količina</Th>
+                      <Th right>Javno (OTC)</Th>
                       <Th right>Tren. cena</Th>
                       <Th right>Pros. kupovna</Th>
                       <Th right>Profit</Th>
@@ -337,6 +338,11 @@ export default function MojPortfolioPage() {
                             <div className="text-xs text-gray-400">{h.name}</div>
                           </Td>
                           <Td right mono>{h.quantity.toLocaleString()}</Td>
+                          <Td right mono>
+                            {h.listingType === 'STOCK'
+                              ? h.publicQuantity.toLocaleString()
+                              : <span className="text-gray-300">—</span>}
+                          </Td>
                           <Td right mono>{formatUSD(h.currentPrice)}</Td>
                           <Td right mono>{formatUSD(h.avgBuyPrice)}</Td>
                           <Td right>

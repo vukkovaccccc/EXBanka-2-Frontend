@@ -49,10 +49,32 @@ describe('Celina 2 — Scenariji 9–16: Plaćanja', () => {
       .should('have.value', '999999999999999999')
   })
 
-  // Scenario 12: Plaćanje u razlicitim valutama uz konverziju — klijent bez računa
-  // Bez računa se <select> popunjava placeholderom; skip.
-  it.skip('S12: moguće je izabrati različit račun platioca iz liste', () => {
-    // Zahteva aktivne račune klijenta (nedostupno u test okruženju bez setup-a računa).
+  // Scenario 12: Plaćanje u različitim valutama uz konverziju
+  // Stub-ujemo listu računa da sadrži 2 računa u različitim valutama,
+  // tako da select za "Račun platioca" ima više opcija koje se mogu izabrati.
+  it('S12: moguće je izabrati različit račun platioca iz liste', () => {
+    cy.intercept('GET', '/api/bank/client/accounts', {
+      statusCode: 200,
+      body: {
+        accounts: [
+          { id: '1', brojRacuna: '1111111111111111', nazivRacuna: 'RSD Tekući',
+            kategorijaRacuna: 'TEKUCI', vrstaRacuna: 'LICNI', valutaOznaka: 'RSD',
+            stanjeRacuna: '10000', rezervisanaSredstva: '0', raspolozivoStanje: '10000' },
+          { id: '2', brojRacuna: '2222222222222222', nazivRacuna: 'EUR Devizni',
+            kategorijaRacuna: 'DEVIZNI', vrstaRacuna: 'LICNI', valutaOznaka: 'EUR',
+            stanjeRacuna: '500', rezervisanaSredstva: '0', raspolozivoStanje: '500' },
+        ],
+      },
+    }).as('getAccountsStub')
+
+    cy.get('aside').contains('Plaćanja').click()
+    cy.get('aside').contains('Novo plaćanje').click()
+    cy.wait('@getAccountsStub')
+
+    // Prvi <select> na formi je "Račun platioca"
+    cy.get('select').first().find('option').should('have.length.at.least', 2)
+    cy.get('select').first().select('2')
+    cy.get('select').first().should('have.value', '2')
   })
 
   // Scenario 13

@@ -20,6 +20,7 @@ export interface HoldingItem {
   lastModified: string
   accountId: string
   publicShares: number
+  publicQuantity: number
   detailsJson: string
 }
 
