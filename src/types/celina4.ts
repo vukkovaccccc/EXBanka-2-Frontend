@@ -22,6 +22,8 @@ export interface OTCOffer {
   // Backend Faza 2: računi za isplatu/prijem premije.
   buyerAccountId?: number
   sellerAccountId?: number | null
+  // Backend-computed: true kada modified_by != callerID (nepročitana izmena)
+  needsReview?: boolean
 }
 
 export interface PartyInfo {

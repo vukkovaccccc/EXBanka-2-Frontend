@@ -29,7 +29,7 @@ export default function OTCTradeTable({ offers, onView }: OTCTradeTableProps) {
       <table className="min-w-full divide-y divide-gray-200 text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {['Akcija', 'Strana', 'Količina', 'Cena', 'Premija', 'Poravnanje', 'Izmenio', 'Poslednja izmena', 'Status', 'Akcije'].map(h => (
+            {['#', 'Akcija', 'Strana', 'Količina', 'Cena', 'Premija', 'Poravnanje', 'Izmenio', 'Poslednja izmena', 'Status', 'Akcije'].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {h}
               </th>
@@ -39,14 +39,14 @@ export default function OTCTradeTable({ offers, onView }: OTCTradeTableProps) {
         <tbody className="divide-y divide-gray-100">
           {offers.length === 0 && (
             <tr>
-              <td colSpan={10} className="py-10 text-center text-gray-400">
+              <td colSpan={11} className="py-10 text-center text-gray-400">
                 Nema ponuda.
               </td>
             </tr>
           )}
           {offers.map(offer => {
             const isBuyer = offer.buyerId === callerID
-            const isMyTurn = offer.modifiedBy !== callerID && offer.status === 'ACTIVE'
+            const isMyTurn = !!offer.needsReview && offer.status === 'ACTIVE'
             // Akcept iz tabele dozvoljen samo kupcu (prodavac često mora da bira
             // svoj račun za prijem premije — to ide preko detalja).
             const canQuickAccept = isMyTurn && isBuyer
@@ -55,6 +55,9 @@ export default function OTCTradeTable({ offers, onView }: OTCTradeTableProps) {
                 key={offer.id}
                 className={isMyTurn ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-50'}
               >
+                <td className="px-4 py-3 text-xs text-gray-400 tabular-nums">
+                  #{offer.id}
+                </td>
                 <td className="px-4 py-3 font-medium text-gray-900">
                   {offer.stock.ticker}
                   {offer.stock.exchange && (

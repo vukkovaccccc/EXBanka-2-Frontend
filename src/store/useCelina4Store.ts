@@ -32,6 +32,7 @@ interface BackendOfferDTO {
   lastModified: string
   modifiedBy: number | string
   marketPriceUsd?: number
+  needsReview?: boolean
 }
 
 function adaptOffer(b: BackendOfferDTO): OTCOffer & {
@@ -63,6 +64,7 @@ function adaptOffer(b: BackendOfferDTO): OTCOffer & {
     status: statusMap[b.status] ?? 'EXPIRED',
     buyerAccountId: b.buyerAccountId,
     sellerAccountId: b.sellerAccountId ?? null,
+    needsReview: b.needsReview ?? false,
   }
 }
 
@@ -239,11 +241,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
     try {
       const { data: raw } = await apiFetch<BackendOfferDTO[]>('/api/otc/offers')
       const offers = (raw ?? []).map(adaptOffer)
-      const { user } = useAuthStore.getState()
-      const lastRead = localStorage.getItem('lastOtcReadTimestamp') ?? '0'
-      const unreadCount = offers.filter(
-        o => o.lastModified > lastRead && o.modifiedBy !== String(user?.id ?? '')
-      ).length
+      const unreadCount = offers.filter(o => o.needsReview && o.status === 'ACTIVE').length
       set({ offers, offersLoading: false, unreadCount })
     } catch (e: unknown) {
       set({ offersLoading: false, offersError: String(e) })
@@ -317,16 +315,9 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   },
 
   markOfferRead: async () => {
-    // Backend ne čuva lastEntranceTimestamp — koristimo samo lokalni timestamp
-    // za "Discord-style" needsReview indikator.
-    localStorage.setItem('lastOtcReadTimestamp', new Date().toISOString())
-    const { offers } = get()
-    const { user } = useAuthStore.getState()
-    const lastRead = localStorage.getItem('lastOtcReadTimestamp') ?? '0'
-    const unreadCount = offers.filter(
-      o => o.lastModified > lastRead && o.modifiedBy !== String(user?.id ?? '')
-    ).length
-    set({ unreadCount })
+    // needsReview se računa na backendu (modifiedBy !== callerID); refresh vraća
+    // ažuriranu vrednost bez potrebe za lokalnim timestamp-om.
+    await get().fetchOffers()
   },
 
   // ── OTC Contracts ─────────────────────────────────────────────────────────

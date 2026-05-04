@@ -6,7 +6,7 @@ import SAGAStatusToast from '@/components/shared/SAGAStatusToast'
 
 export default function OTCOffersPage() {
   const navigate = useNavigate()
-  const { offers, offersLoading, offersError, fetchOffers } = useCelina4Store()
+  const { offers, offersLoading, offersError, fetchOffers, unreadCount } = useCelina4Store()
 
   useEffect(() => {
     fetchOffers()
@@ -20,7 +20,14 @@ export default function OTCOffersPage() {
       </nav>
 
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">OTC Ponude</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
+          OTC Ponude
+          {unreadCount > 0 && (
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white">
+              {unreadCount}
+            </span>
+          )}
+        </h1>
       </div>
 
       {offersLoading && (
