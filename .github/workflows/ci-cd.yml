@@ -4,8 +4,7 @@ on:
   pull_request:
     branches: ['**']
   push:
-    # TODO: ukloniti '**' nakon validacije na forku; ostaviti samo [main]
-    branches: [main, '**']
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -136,10 +135,10 @@ jobs:
   e2e-full:
     name: Cypress E2E (full stack)
     runs-on: ubuntu-latest
-    # Skup tuneliran: uvek na push u main; na PR samo ako je labela `full-e2e`
-    # ili je workflow_dispatch-ovan.
+    # Pokreće se samo na upstream main-u (ne na forkovima), PR sa labelom `full-e2e`, ili workflow_dispatch.
     if: >
-      github.event_name == 'push' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+       github.repository == 'RAF-SI-2025/EXBanka-2-Frontend') ||
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
        contains(github.event.pull_request.labels.*.name, 'full-e2e'))
